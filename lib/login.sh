@@ -3,6 +3,8 @@ LOGIN_CLEAN_FILE="$STATE_DIR/login-cleaning.conf"
 LOGIN_TWEAK_AGENT="$HOME/Library/LaunchAgents/com.zot.login.tweaks.plist"
 LOGIN_CLEAN_AGENT="$HOME/Library/LaunchAgents/com.zot.login.cleaning.plist"
 LOGIN_SYSTEM_DAEMON="/Library/LaunchDaemons/com.zot.login.system-tweaks.plist"
+LOGIN_SYSTEM_DIR="/Library/Application Support/Zot"
+LOGIN_SYSTEM_SCRIPT="$LOGIN_SYSTEM_DIR/login-system.sh"
 
 login_tweak_load(){
   LOGIN_PROFILE="balanced"
@@ -121,9 +123,31 @@ EOF
 }
 
 write_system_tweak_daemon(){
-  local tmp
-  tmp="$(mktemp)"
-  cat > "$tmp" <<EOF
+  local plist_tmp script_tmp labels label kind
+  plist_tmp="$(mktemp)"
+  script_tmp="$(mktemp)"
+  login_tweak_load
+
+  cat > "$script_tmp" <<'EOF'
+#!/bin/bash
+set -u
+EOF
+
+  labels="$(login_profile_labels | awk '!seen[$0]++')"
+  while IFS= read -r label; do
+    [ -n "$label" ] || continue
+    kind="$(plist_kind "$label" | head -1)"
+    [ "$kind" = system ] || continue
+    printf '/bin/launchctl disable %q >/dev/null 2>&1 || true\n' "system/$label" >> "$script_tmp"
+    printf '/bin/launchctl bootout %q >/dev/null 2>&1 || true\n' "system/$label" >> "$script_tmp"
+  done <<< "$labels"
+
+  if [ "$LOGIN_SPOTLIGHT" = off ]; then
+    printf '/usr/bin/mdutil -i off / >/dev/null 2>&1 || true\n' >> "$script_tmp"
+  fi
+  printf 'exit 0\n' >> "$script_tmp"
+
+  cat > "$plist_tmp" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -132,34 +156,28 @@ write_system_tweak_daemon(){
   <string>com.zot.login.system-tweaks</string>
   <key>ProgramArguments</key>
   <array>
-    <string>$BASE_DIR/zot</string>
-    <string>login-run-system</string>
+    <string>$LOGIN_SYSTEM_SCRIPT</string>
   </array>
-  <key>EnvironmentVariables</key>
-  <dict>
-    <key>HOME</key>
-    <string>$HOME</string>
-    <key>ZOT_HOME</key>
-    <string>$BASE_DIR</string>
-    <key>PATH</key>
-    <string>/usr/bin:/bin:/usr/sbin:/sbin</string>
-  </dict>
   <key>RunAtLoad</key>
   <true/>
   <key>ProcessType</key>
   <string>Background</string>
   <key>StandardOutPath</key>
-  <string>$STATE_DIR/login-system.log</string>
+  <string>/var/log/zot-login-system.log</string>
   <key>StandardErrorPath</key>
-  <string>$STATE_DIR/login-system-error.log</string>
+  <string>/var/log/zot-login-system-error.log</string>
 </dict>
 </plist>
 EOF
-  sudo mkdir -p /Library/LaunchDaemons
-  sudo cp "$tmp" "$LOGIN_SYSTEM_DAEMON"
+
+  sudo mkdir -p "$LOGIN_SYSTEM_DIR" /Library/LaunchDaemons
+  sudo cp "$script_tmp" "$LOGIN_SYSTEM_SCRIPT"
+  sudo chown root:wheel "$LOGIN_SYSTEM_SCRIPT"
+  sudo chmod 700 "$LOGIN_SYSTEM_SCRIPT"
+  sudo cp "$plist_tmp" "$LOGIN_SYSTEM_DAEMON"
   sudo chown root:wheel "$LOGIN_SYSTEM_DAEMON"
   sudo chmod 644 "$LOGIN_SYSTEM_DAEMON"
-  rm -f "$tmp"
+  rm -f "$plist_tmp" "$script_tmp"
 }
 
 login_tweaks_enable(){
@@ -183,6 +201,10 @@ login_tweaks_disable(){
   if [ -f "$LOGIN_SYSTEM_DAEMON" ]; then
     sudo launchctl bootout system "$LOGIN_SYSTEM_DAEMON" >/dev/null 2>&1 || true
     sudo rm -f "$LOGIN_SYSTEM_DAEMON"
+  fi
+  if [ -f "$LOGIN_SYSTEM_SCRIPT" ]; then
+    sudo rm -f "$LOGIN_SYSTEM_SCRIPT"
+    sudo rmdir "$LOGIN_SYSTEM_DIR" >/dev/null 2>&1 || true
   fi
   record login-disable tweaks 0
 }
@@ -210,6 +232,24 @@ login_clean_disable(){
 login_disable_all(){
   login_tweaks_disable || true
   login_clean_disable || true
+}
+
+login_apply_system_now(){
+  local labels label kind
+  login_tweak_load
+  labels="$(login_profile_labels | awk '!seen[$0]++')"
+
+  while IFS= read -r label; do
+    [ -n "$label" ] || continue
+    kind="$(plist_kind "$label" | head -1)"
+    [ "$kind" = system ] || continue
+    sudo launchctl disable "system/$label" >/dev/null 2>&1 || true
+    sudo launchctl bootout "system/$label" >/dev/null 2>&1 || true
+  done <<< "$labels"
+
+  if [ "$LOGIN_SPOTLIGHT" = off ]; then
+    sudo mdutil -i off / >/dev/null 2>&1 || true
+  fi
 }
 
 login_clean_run(){
@@ -517,7 +557,7 @@ login_hub(){
 
 ' "$BOLD" "$RESET"
         login_apply_tweaks user
-        sudo env HOME="$HOME" ZOT_HOME="$BASE_DIR" "$BASE_DIR/zot" login-run-system
+        login_apply_system_now
         printf '%bDone.%b
 
 ' "$GREEN" "$RESET"
