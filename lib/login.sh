@@ -48,6 +48,19 @@ login_tweaks_enabled(){ [ -f "$LOGIN_TWEAK_AGENT" ]; }
 login_clean_enabled(){ [ -f "$LOGIN_CLEAN_AGENT" ]; }
 login_system_enabled(){ [ -f "$LOGIN_SYSTEM_DAEMON" ]; }
 
+login_needs_system_helper(){
+  local labels label kind
+  login_tweak_load
+  [ "$LOGIN_SPOTLIGHT" = off ] && return 0
+  labels="$(login_profile_labels | awk '!seen[$0]++')"
+  while IFS= read -r label; do
+    [ -n "$label" ] || continue
+    kind="$(plist_kind "$label" | head -1)"
+    [ "$kind" = system ] && return 0
+  done <<< "$labels"
+  return 1
+}
+
 login_profile_labels(){
   case "$LOGIN_PROFILE" in
     balanced) read_preset "$(preset_file balanced)";;
@@ -182,14 +195,24 @@ EOF
 
 login_tweaks_enable(){
   login_tweak_load
+  launchctl bootout "gui/$UID_NUM/com.zot.login.tweaks" >/dev/null 2>&1 || true
   write_user_agent "$LOGIN_TWEAK_AGENT" "com.zot.login.tweaks" "login-run-tweaks" "login-tweaks"
 
-  launchctl bootout "gui/$UID_NUM" "$LOGIN_TWEAK_AGENT" >/dev/null 2>&1 || true
-  launchctl bootstrap "gui/$UID_NUM" "$LOGIN_TWEAK_AGENT" >/dev/null 2>&1 || true
-
-  write_system_tweak_daemon
-  sudo launchctl bootout system "$LOGIN_SYSTEM_DAEMON" >/dev/null 2>&1 || true
-  sudo launchctl bootstrap system "$LOGIN_SYSTEM_DAEMON" >/dev/null 2>&1 || true
+  if login_needs_system_helper; then
+    if [ -f "$LOGIN_SYSTEM_DAEMON" ]; then
+      sudo launchctl bootout system "$LOGIN_SYSTEM_DAEMON" >/dev/null 2>&1 || true
+    fi
+    write_system_tweak_daemon
+  else
+    if [ -f "$LOGIN_SYSTEM_DAEMON" ]; then
+      sudo launchctl bootout system "$LOGIN_SYSTEM_DAEMON" >/dev/null 2>&1 || true
+      sudo rm -f "$LOGIN_SYSTEM_DAEMON"
+    fi
+    if [ -f "$LOGIN_SYSTEM_SCRIPT" ]; then
+      sudo rm -f "$LOGIN_SYSTEM_SCRIPT"
+      sudo rmdir "$LOGIN_SYSTEM_DIR" >/dev/null 2>&1 || true
+    fi
+  fi
 
   record login-enable tweaks 0
 }
