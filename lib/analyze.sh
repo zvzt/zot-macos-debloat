@@ -68,7 +68,7 @@ folder_usage_screen(){
   done | sort -hr
   printf '\n%bRead-only view.%b\n\n' "$GRAY" "$RESET"; press_enter
 }
-analyze_menu(){ while :; do menu "Analyze Storage" "Storage Overview" "Large Files (500MB+)" "Old Installers" "iPhone / iPad Backups" "Project Artifacts" "Back"; case "$MENU_RESULT" in 0) folder_usage_screen;; 1) large_files_screen;; 2) installers_screen;; 3) backup_screen;; 4) purge_projects;; *) return;; esac; done; }
+analyze_menu(){ while :; do menu "Analyze Storage" "Storage Overview — major user folders" "Large Files — review files over 500 MB" "Old Installers — DMG, PKG, XIP, ISO" "iPhone / iPad Backups — local device backups" "Project Artifacts — rebuildable developer folders" "Back — return to the hub"; case "$MENU_RESULT" in 0) folder_usage_screen;; 1) large_files_screen;; 2) installers_screen;; 3) backup_screen;; 4) purge_projects;; *) return;; esac; done; }
 list_apps(){
   APP_PATHS=(); APP_LABELS=(); APP_BUNDLES=(); APP_NAMES=(); local app name bundle size
   while IFS= read -r app; do
