@@ -14,29 +14,58 @@ record(){
   mkdir -p "$STATE_DIR"
   printf '%s|%s|%s|%s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$1" "${2//|/ }" "${3:-0}" >> "$HISTORY_FILE"
 }
+
+apply_theme(){
+  case "${THEME:-cyan}" in
+    purple) ACCENT="${ESC}[38;5;177m"; ACCENT2="${ESC}[38;5;141m";;
+    blue)   ACCENT="${ESC}[38;5;75m";  ACCENT2="${ESC}[38;5;111m";;
+    green)  ACCENT="${ESC}[38;5;78m";  ACCENT2="${ESC}[38;5;114m";;
+    amber)  ACCENT="${ESC}[38;5;221m"; ACCENT2="${ESC}[38;5;215m";;
+    red)    ACCENT="${ESC}[38;5;203m"; ACCENT2="${ESC}[38;5;210m";;
+    mono)   ACCENT="${ESC}[38;5;255m"; ACCENT2="${ESC}[38;5;250m";;
+    *)      THEME="cyan"; ACCENT="${ESC}[38;5;81m"; ACCENT2="${ESC}[38;5;75m";;
+  esac
+  CYAN="$ACCENT"
+  BLUE="$ACCENT2"
+}
+
 confirm(){
   local p="$1" ans
-  printf '%b%s [y/N]: %b' "$YELLOW" "$p" "$RESET"
-  IFS= read -r ans
-  case "$ans" in y|Y|yes|YES) return 0;; *) return 1;; esac
+  while :; do
+    printf '%b%s [Y/N]: %b' "$YELLOW" "$p" "$RESET"
+    IFS= read -r ans
+    case "$ans" in
+      y|Y|yes|YES) return 0;;
+      n|N|no|NO) return 1;;
+      *) printf '%bPlease type Y or N.%b\n' "$GRAY" "$RESET";;
+    esac
+  done
 }
 press_enter(){ printf '%bPress Enter to continue...%b' "$GRAY" "$RESET"; IFS= read -r _; }
+
 header(){
+  apply_theme
   clear
-  printf '%b%bZot%b  %bmacOS utility hub%b\n' "$BOLD" "$CYAN" "$RESET" "$GRAY" "$RESET"
-  printf '%b%s%b\n\n' "$GRAY" "$(printf '%*s' 68 '' | tr ' ' '─')" "$RESET"
+  printf '%b╭────────────────────────────────────────────────────────────────────╮%b\n' "$ACCENT" "$RESET"
+  printf '%b│%b  %bZOT%b  %bmacOS utility hub%b                                      %bv%s%b  %b│%b\n' "$ACCENT" "$RESET" "$BOLD$ACCENT" "$RESET" "$GRAY" "$RESET" "$GRAY" "$VERSION" "$RESET" "$ACCENT" "$RESET"
+  printf '%b╰────────────────────────────────────────────────────────────────────╯%b\n\n' "$ACCENT" "$RESET"
 }
 cleanup_terminal(){ [ -t 1 ] || return 0; printf '%b\033[?25h%b' "$RESET" "$RESET"; stty echo 2>/dev/null || true; }
 trap cleanup_terminal EXIT INT TERM
 
 load_config(){
-  PROFILE="balanced"; SIRI="keep"; INTELLIGENCE="keep"; SPOTLIGHT="keep"
-  [ -f "$CONFIG_FILE" ] || return 0
+  PROFILE="balanced"; SIRI="keep"; INTELLIGENCE="keep"; SPOTLIGHT="keep"; THEME="cyan"
+  [ -f "$CONFIG_FILE" ] || { apply_theme; return 0; }
   while IFS='=' read -r k v; do
     case "$k" in
-      profile) PROFILE="$v";; siri) SIRI="$v";; intelligence) INTELLIGENCE="$v";; spotlight) SPOTLIGHT="$v";;
+      profile) PROFILE="$v";;
+      siri) SIRI="$v";;
+      intelligence) INTELLIGENCE="$v";;
+      spotlight) SPOTLIGHT="$v";;
+      theme) THEME="$v";;
     esac
   done < "$CONFIG_FILE"
+  apply_theme
 }
 save_config(){
   mkdir -p "$BASE_DIR"
@@ -45,6 +74,7 @@ profile=$PROFILE
 siri=$SIRI
 intelligence=$INTELLIGENCE
 spotlight=$SPOTLIGHT
+theme=$THEME
 EOF
 }
 
@@ -54,15 +84,19 @@ menu(){
   MENU_RESULT=-1
   while :; do
     header
-    printf '%b%s%b\n' "$BOLD" "$title" "$RESET"
-    [ -n "${MENU_SUBTITLE:-}" ] && printf '%b%s%b\n' "$GRAY" "$MENU_SUBTITLE" "$RESET"
+    printf '%b◆ %s%b\n' "$BOLD$ACCENT" "$title" "$RESET"
+    [ -n "${MENU_SUBTITLE:-}" ] && printf '%b  %s%b\n' "$GRAY" "$MENU_SUBTITLE" "$RESET"
     printf '\n'
     i=0
     for item in "$@"; do
-      if [ "$i" -eq "$selected" ]; then printf '  %b› %-58s%b\n' "$CYAN$BOLD" "$item" "$RESET"; else printf '    %-58s\n' "$item"; fi
+      if [ "$i" -eq "$selected" ]; then
+        printf '  %b▸ %-62s%b\n' "$ACCENT$BOLD" "$item" "$RESET"
+      else
+        printf '    %-62s\n' "$item"
+      fi
       i=$((i+1))
     done
-    printf '\n%b↑/↓ move   Enter select   q back%b\n' "$GRAY" "$RESET"
+    printf '\n%b  ↑/↓ move   Enter select   q back   • theme: %s%b\n' "$GRAY" "$THEME" "$RESET"
     IFS= read -rsn1 key
     if [ "$key" = "$ESC" ]; then IFS= read -rsn2 seq; case "$seq" in '[A') key='UP';; '[B') key='DOWN';; esac; fi
     case "$key" in
@@ -82,12 +116,16 @@ multi_menu(){
   for ((i=0;i<n;i++)); do marks[$i]=0; done
   while :; do
     header
-    printf '%b%s%b\n\n' "$BOLD" "$title" "$RESET"
+    printf '%b◆ %s%b\n\n' "$BOLD$ACCENT" "$title" "$RESET"
     for ((i=0;i<n;i++)); do
       local box='○'; [ "${marks[$i]}" -eq 1 ] && box='●'
-      if [ "$i" -eq "$selected" ]; then printf '  %b› %s %-54s%b\n' "$CYAN$BOLD" "$box" "${labels[$i]}" "$RESET"; else printf '    %s %-54s\n' "$box" "${labels[$i]}"; fi
+      if [ "$i" -eq "$selected" ]; then
+        printf '  %b▸ %s %-58s%b\n' "$ACCENT$BOLD" "$box" "${labels[$i]}" "$RESET"
+      else
+        printf '    %s %-58s\n' "$box" "${labels[$i]}"
+      fi
     done
-    printf '\n%bSpace toggle   a all/none   Enter continue   q back%b\n' "$GRAY" "$RESET"
+    printf '\n%b  Space toggle   a all/none   Enter continue   q back%b\n' "$GRAY" "$RESET"
     IFS= read -rsn1 key
     if [ "$key" = "$ESC" ]; then IFS= read -rsn2 seq; case "$seq" in '[A') key='UP';; '[B') key='DOWN';; esac; fi
     case "$key" in
@@ -95,7 +133,8 @@ multi_menu(){
       DOWN|j) selected=$((selected+1)); [ "$selected" -ge "$n" ] && selected=0;;
       ' ') if [ "${marks[$selected]}" -eq 1 ]; then marks[$selected]=0; else marks[$selected]=1; fi;;
       a|A)
-        local any=0; for ((i=0;i<n;i++)); do [ "${marks[$i]}" -eq 0 ] && any=1; done
+        local any=0
+        for ((i=0;i<n;i++)); do [ "${marks[$i]}" -eq 0 ] && any=1; done
         for ((i=0;i<n;i++)); do marks[$i]=$any; done;;
       '')
         for ((i=0;i<n;i++)); do [ "${marks[$i]}" -eq 1 ] && MULTI_RESULT="$MULTI_RESULT $i"; done
@@ -157,7 +196,7 @@ status_screen(){
   while :; do
     basic_snapshot
     header
-    printf '%bSystem%b\n' "$BOLD" "$RESET"
+    printf '%b◆ Live Performance%b\n' "$BOLD$ACCENT" "$RESET"
     printf '  %-18s %s\n' 'Model' "$SNAP_MODEL"
     printf '  %-18s %s\n' 'macOS' "$SNAP_OS"
     printf '  %-18s %s\n' 'Free disk' "$SNAP_FREE"
