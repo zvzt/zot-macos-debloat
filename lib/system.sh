@@ -24,7 +24,7 @@ startup_restore_all(){
 }
 startup_screen(){
   while :; do
-    menu "Startup & Background" "Review LaunchAgents / LaunchDaemons" "Restore Items Disabled by Zot" "Show macOS Background Item Report" "Back"
+    menu "Startup & Background" "Review Jobs — LaunchAgents and LaunchDaemons" "Restore Zot Changes — re-enable items Zot disabled" "Background Report — macOS background task report" "Back — return to the hub"
     case "$MENU_RESULT" in
       0)
         header; printf '%bScanning startup items...%b\n' "$BOLD" "$RESET"; list_startup
@@ -42,9 +42,9 @@ startup_screen(){
 }
 optimize_screen(){
   local -a labels keys
-  labels=("Flush DNS cache" "Reset Quick Look thumbnail cache" "Rebuild LaunchServices app registration" "Verify startup volume (read-only)" "Reindex Spotlight" "Run macOS periodic maintenance")
+  labels=("Flush DNS — refresh name-resolution cache" "Reset Quick Look — rebuild preview cache" "Rebuild LaunchServices — refresh app registrations" "Verify Startup Volume — read-only disk check" "Reindex Spotlight — rebuild search index" "Periodic Maintenance — run macOS maintenance scripts")
   keys=(dns ql ls disk spotlight periodic)
-  have brew && { labels+=("Homebrew cleanup"); keys+=(brew); }; have xcrun && { labels+=("Delete unavailable simulators"); keys+=(sim); }
+  have brew && { labels+=("Homebrew Cleanup — old versions and downloads"); keys+=(brew); }; have xcrun && { labels+=("Xcode Simulators — delete unavailable devices"); keys+=(sim); }
   multi_menu "Optimize · safe maintenance tasks" "${labels[@]}" || return; [ -n "$MULTI_RESULT" ] || return
   header; printf '%bOptimization plan%b\n\n' "$BOLD" "$RESET"; local idx; for idx in $MULTI_RESULT; do printf '  %s\n' "${labels[$idx]}"; done
   printf '\n%bNo RAM purge, forced process killing, defrag, or random system-cache deletion is used.%b\n\n' "$GRAY" "$RESET"; confirm "Run selected maintenance tasks?" || return
@@ -100,7 +100,7 @@ services_restore(){
 services_screen(){
   load_config
   while :; do
-    menu "Services & Features" "Profile: $PROFILE" "Siri: $SIRI" "Apple Intelligence: $INTELLIGENCE" "Spotlight indexing: $SPOTLIGHT" "Apply Selected Configuration" "Restore Zot Service Changes" "Back"
+    menu "Services & Features" "Profile: $PROFILE — balanced or aggressive services" "Siri: $SIRI — voice assistant services" "Apple Intelligence: $INTELLIGENCE — AI background services" "Spotlight: $SPOTLIGHT — search indexing preference" "Apply Configuration — apply selected service settings" "Restore Service Changes — undo Zot service changes" "Back — return to the hub"
     case "$MENU_RESULT" in
       0) [ "$PROFILE" = balanced ] && PROFILE=aggressive || PROFILE=balanced; save_config;;
       1) [ "$SIRI" = keep ] && SIRI=disable || SIRI=keep; save_config;;
