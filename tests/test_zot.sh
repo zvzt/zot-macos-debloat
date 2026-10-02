@@ -14,7 +14,16 @@ ZOT_HOME="$ROOT" "$ROOT/zot" --help | grep -q 'zot install'
 ! grep -qi 'Python 3 is required' "$ROOT/install.sh"
 ! grep -qi 'pip install' "$ROOT/install.sh"
 ! grep -q 'RunAtLoad' "$ROOT/install.sh"
+! grep -q 'launchctl bootstrap' "$ROOT/install.sh"
 ! grep -q '/System/Library/LaunchAgents' "$ROOT/lib/system.sh"
+
+grep -q 'Would you like to delete all previous-version data' "$ROOT/install.sh"
+grep -q '\.macos-debloat' "$ROOT/install.sh"
+grep -q '\.zxt-macos-debloat' "$ROOT/install.sh"
+grep -q '/usr/local/bin/debloat' "$ROOT/install.sh"
+grep -q '/usr/local/bin/zxt' "$ROOT/install.sh"
+grep -q 'com.zot.macos-debloat' "$ROOT/install.sh"
+grep -q 'com.zxt.macos-debloat' "$ROOT/install.sh"
 
 grep -q 'Homebrew is not installed' "$ROOT/lib/hub.sh"
 grep -q 'Age-based Cache Clean' "$ROOT/lib/clean.sh"

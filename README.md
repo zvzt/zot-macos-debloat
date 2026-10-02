@@ -16,6 +16,16 @@ Then run:
 zot
 ```
 
+### First-install legacy cleanup
+
+On the first Zot install, the installer checks for older Zot/ZXT/debloat versions. If any are found, it lists them and asks whether you want to remove all previous-version data.
+
+Choosing **Yes** will first try to restore changes tracked by the old version, restore Spotlight if the old version had disabled it, unload/remove old login and background launchd jobs, remove legacy command links such as `zxt` and `debloat`, and delete the old `~/.zxt-macos-debloat` / `~/.macos-debloat` data.
+
+Choosing **No** leaves the old installation and its jobs untouched.
+
+The new Zot version itself does not install an auto-login item, LaunchAgent, LaunchDaemon, or persistent background helper.
+
 Everything Zot owns lives under:
 
 ```text
