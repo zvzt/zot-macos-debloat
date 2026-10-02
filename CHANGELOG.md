@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.1.0
+
+- Added an interactive mass cleaner with per-category questions and a final confirmation.
+- Added dry-run support for cleanup selection.
+- Added cleanup for user caches, logs, Trash, Xcode DerivedData, Homebrew, pip, npm, pnpm, Yarn, and Quick Look caches when available.
+- Added strict cleanup path allowlisting so arbitrary paths are refused.
+- Added direct category flags and guarded non-interactive `--yes` mode.
+- Added cleaner safety and dry-run tests.
+
 ## 2.0.1
 
 - Fixed parsing of `launchctl print-disabled` so disabled services are reported correctly.
