@@ -468,7 +468,6 @@ main(){
     restore) restore_all;;
     update) update_zot;;
     login-run-tweaks) login_apply_tweaks user;;
-    login-run-system) login_apply_tweaks system;;
     login-run-cleaning) login_clean_run;;
     login-disable-all) login_disable_all;;
     reapply-user) services_apply >/dev/null 2>&1 || true;;
