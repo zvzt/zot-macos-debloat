@@ -2,7 +2,7 @@
 
 A lightweight terminal hub for cleaning, analyzing, maintaining, and configuring macOS.
 
-Run `zot` to open the interactive interface. Zot is dependency-free on the tool side: it uses Bash and macOS system utilities already present on the machine. It does not install a Python environment, UI framework, telemetry service, account service, or persistent background helper.
+Run `zot` to open the interactive interface. Zot is dependency-free on the tool side: it uses Bash and macOS system utilities already present on the machine. It does not install a Python environment, UI framework, telemetry service, or account service. Optional Login Items are created only when you explicitly enable them, run once at boot/login, and exit instead of staying resident.
 
 ## Install / Update
 
@@ -24,7 +24,7 @@ Choosing **Yes** will first try to restore changes tracked by the old version, r
 
 Choosing **No** leaves the old installation and its jobs untouched.
 
-The new Zot version itself does not install an auto-login item, LaunchAgent, LaunchDaemon, or persistent background helper.
+A fresh Zot install does not create any auto-login item, LaunchAgent, LaunchDaemon, or persistent background helper. Login Items are opt-in from inside Zot.
 
 Everything Zot owns lives under:
 
@@ -37,7 +37,7 @@ Everything Zot owns lives under:
 └── state/
 ```
 
-The only system-level file Zot creates is the command symlink at `/usr/local/bin/zot`.
+By default, the only system-level files Zot creates are its command symlinks in `/usr/local/bin`. If you explicitly enable Tweaks Auto Apply, Zot also installs a root-owned one-shot LaunchDaemon and root-owned generated helper script for system-level tweak reapplication.
 
 ## Hub
 
@@ -51,6 +51,7 @@ Main sections:
 - **Analyze Storage** — storage overview, large files, installers, local iPhone/iPad backups, and rebuildable project artifacts.
 - **Apps & Leftovers** — uninstall applications to Trash and review exact bundle-ID leftovers.
 - **Startup & Background** — inspect third-party LaunchAgents/LaunchDaemons, disable selected items, and restore Zot-managed changes.
+- **Login Items** — configure separate Tweaks and Cleaning jobs that run once at boot/login and exit.
 - **Optimize** — bounded maintenance such as DNS flush, Quick Look reset, LaunchServices refresh, disk verification, Spotlight reindex, periodic maintenance, Homebrew cleanup, and unavailable simulator cleanup.
 - **Install Apps** — curated app browser similar to a setup utility.
 - **Services & Features** — Balanced/Aggressive service profiles plus optional Siri, Apple Intelligence, and Spotlight controls.
@@ -134,6 +135,61 @@ Disabled items are recorded in `~/.zot/state/` so they can be restored later.
 
 Zot intentionally does not enumerate `/System/Library` as user-selectable startup items.
 
+## Login Items
+
+Run `zot login` or `zot-login` to open the Login Items hub.
+
+### Tweaks
+
+Choose a saved login profile:
+
+- **Balanced** — lower-impact service reductions
+- **Aggressive** — more optional services disabled
+- **None** — only use the optional selections below
+- **Siri** — keep or disable
+- **Apple Intelligence** — keep or disable
+- **Spotlight** — keep or disable indexing
+
+After saving the selection, Zot asks:
+
+```text
+Enable Auto Apply for these tweaks at login? [Y/N]:
+```
+
+macOS can re-enable some services after restarts or system updates, so Auto Apply can reapply the selected profile. User-level tweaks use a LaunchAgent. If system-level tweaks are selected, Zot creates a minimal root-owned helper and LaunchDaemon containing only the selected system service actions. It does **not** run the user-writable Zot program as root.
+
+Turning Auto Apply on does not immediately apply anything; it starts on the next boot/login. Use **Run Tweaks Now** when you want to apply the saved profile immediately.
+
+### Cleaning
+
+Select any of these independently:
+
+- User app caches
+- User logs
+- Trash
+- Xcode DerivedData
+- Zen / Firefox / LibreWolf browser caches
+- Homebrew cleanup
+- pip cache
+- npm cache
+- pnpm store
+- Yarn cache
+- Quick Look cache
+
+Zot then asks:
+
+```text
+Enable automatic cleaning at login? [Y/N]:
+```
+
+Cleaning runs once at login and exits. Cache cleanup can make the first launch of apps slower while caches rebuild, so nothing is selected automatically.
+
+### Login status and controls
+
+`zot-login` shows whether Tweaks and Cleaning are ON or OFF and lets you configure, toggle, run, or disable each job. `zot-status` also reports both states.
+
+Disabling a login item removes future auto-run behavior. It does not silently restore or change tweaks already applied. `zot restore` disables Tweaks Auto Apply first so restored service changes remain restored.
+
 ## Optimize
 
 The optimization section avoids fake performance tricks. Zot does **not** use RAM purging, forced process killing, APFS defragmentation, indiscriminate system-cache deletion, or random `defaults` tweaks.
@@ -204,6 +260,7 @@ zot theme
 zot-status
 zot-performance
 zot-clean
+zot-login
 zot-optimize
 zot-install
 zot scan
@@ -211,6 +268,7 @@ zot clean
 zot analyze
 zot apps
 zot startup
+zot login
 zot optimize
 zot install
 zot services
@@ -229,7 +287,7 @@ zot version
 - Supported personal-file cleanup uses Trash where practical.
 - Rebuildable caches/artifacts may be permanently removed after confirmation.
 - Startup and service changes made by Zot are tracked for restore.
-- No always-running Zot process is installed.
+- Login jobs are opt-in, one-shot launchd jobs; Zot does not install an always-running process.
 - No telemetry or remote account is used.
 - Paths are bounded to known cleanup locations or explicitly selected items.
 
@@ -247,7 +305,7 @@ The original service-debloat work was inspired by [OleksandrKrupko/mac-os-debloa
 bash <(curl -fsSL -H "Accept: application/vnd.github.raw+json" "https://api.github.com/repositories/1356850441/contents/uninstall.sh?ref=main")
 ```
 
-The uninstaller restores Zot-managed startup/service changes first and then removes Zot's own files.
+The uninstaller first disables/removes Zot Login Items, restores Zot-managed startup/service changes, and then removes Zot's own files.
 
 ## Maintainer
 
