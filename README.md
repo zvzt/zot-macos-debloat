@@ -65,6 +65,12 @@ Open the configuration wizard again:
 zxt configure
 ```
 
+Open the interactive mass cleaner:
+
+```bash
+zxt clean
+```
+
 Preview what ZXT would change without changing anything:
 
 ```bash
@@ -100,6 +106,54 @@ Show every command:
 ```bash
 zxt help
 ```
+
+
+## Mass cleaner
+
+Run:
+
+```bash
+zxt clean
+```
+
+Nothing is selected by default. ZXT shows each available category, explains what it removes, and asks before selecting it. After the questions, it shows one combined summary and asks again before deleting anything.
+
+Available cleanup categories:
+
+- User app caches in `~/Library/Caches`
+- User logs in `~/Library/Logs`
+- Current user Trash
+- Xcode `DerivedData`
+- Homebrew cleanup when Homebrew is installed
+- Python pip cache
+- npm cache when npm is installed
+- pnpm store pruning when pnpm is installed
+- Yarn cache when Yarn is installed
+- Quick Look thumbnail/preview cache
+
+Preview a cleanup without changing anything:
+
+```bash
+zxt clean --dry-run
+```
+
+You can also select categories directly:
+
+```bash
+zxt clean --caches --logs --homebrew
+zxt clean --trash --xcode
+zxt clean --all
+```
+
+Direct category flags still require the final confirmation. For deliberate non-interactive use, add `--yes`:
+
+```bash
+zxt clean --caches --logs --yes
+```
+
+`--yes` is rejected unless cleanup categories were explicitly supplied.
+
+The cleaner does not target Documents, Downloads, iPhone backups, application preferences, user projects, or protected macOS system files. File cleanup runs without sudo. Some in-use or privacy-protected cache/log files may be skipped.
 
 ## Change features quickly
 

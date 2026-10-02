@@ -71,5 +71,42 @@ class ZxtTests(unittest.TestCase):
         self.assertNotIn('bootstrap system "$SYSTEM_DAEMON"',text)
         self.assertIn("launchctl disable overrides",text)
 
+
+    def test_human_bytes(self):
+        self.assertEqual(zxt.human_bytes(0),"0 B")
+        self.assertEqual(zxt.human_bytes(1024),"1.0 KB")
+        self.assertEqual(zxt.human_bytes(1024*1024),"1.0 MB")
+
+    def test_clean_dry_run_keeps_files(self):
+        with tempfile.TemporaryDirectory() as temp:
+            home=Path(temp)
+            target=home/"Library"/"Caches"
+            target.mkdir(parents=True)
+            sample=target/"sample.cache"
+            sample.write_text("data")
+            targets={"caches":("User app caches",target,"test")}
+            with mock.patch.object(zxt,"HOME",home), \
+                 mock.patch.object(zxt,"CLEAN_PATH_TARGETS",targets), \
+                 mock.patch.object(zxt,"CLEAN_COMMAND_DESCRIPTIONS",{}), \
+                 mock.patch.object(zxt,"clean_command",return_value=None):
+                zxt.clean(["--caches","--dry-run"])
+            self.assertTrue(sample.exists())
+
+    def test_clean_directory_only_clears_allowed_target(self):
+        with tempfile.TemporaryDirectory() as temp:
+            home=Path(temp)
+            target=home/"Library"/"Caches"
+            target.mkdir(parents=True)
+            (target/"one").write_text("x")
+            nested=target/"nested"
+            nested.mkdir()
+            (nested/"two").write_text("y")
+            targets={"caches":("User app caches",target,"test")}
+            with mock.patch.object(zxt,"HOME",home), \
+                 mock.patch.object(zxt,"CLEAN_PATH_TARGETS",targets):
+                _,failures=zxt.clear_directory_contents(target)
+            self.assertEqual(failures,0)
+            self.assertEqual(list(target.iterdir()),[])
+
 if __name__=="__main__":
     unittest.main()

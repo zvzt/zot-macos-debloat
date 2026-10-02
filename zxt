@@ -5,12 +5,13 @@ import json
 import os
 import platform
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 from typing import Optional
 
-VERSION = "2.0.1"
+VERSION = "2.1.0"
 UID = os.getuid()
 BASE_DIR = Path(__file__).resolve().parent
 PRESETS_DIR = BASE_DIR / "presets"
@@ -50,6 +51,22 @@ BANNER = r"""
 ZXT macOS Debloat
 =================
 """
+
+HOME = Path.home()
+CLEAN_PATH_TARGETS = {
+    "caches": ("User app caches", HOME / "Library" / "Caches", "Rebuildable app cache files; apps may reopen a little slower once."),
+    "logs": ("User logs", HOME / "Library" / "Logs", "Application logs and user diagnostic logs."),
+    "trash": ("Trash", HOME / ".Trash", "Permanently empties the current user Trash."),
+    "xcode": ("Xcode DerivedData", HOME / "Library" / "Developer" / "Xcode" / "DerivedData", "Derived build products that Xcode can regenerate."),
+}
+CLEAN_COMMAND_DESCRIPTIONS = {
+    "homebrew": ("Homebrew cleanup", "Removes stale Homebrew versions and cached downloads."),
+    "pip": ("Python pip cache", "Removes pip download and wheel caches."),
+    "npm": ("npm cache", "Removes npm package cache data."),
+    "pnpm": ("pnpm store prune", "Removes unreferenced pnpm store packages."),
+    "yarn": ("Yarn cache", "Removes Yarn package cache data."),
+    "quicklook": ("Quick Look cache", "Resets cached thumbnails and previews."),
+}
 
 
 def run(cmd: list[str], quiet: bool = True) -> subprocess.CompletedProcess:
@@ -581,10 +598,264 @@ def spotlight_command(action: str) -> None:
     sys.exit(2)
 
 
+
+def human_bytes(value: int) -> str:
+    size = float(max(0, value))
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if size < 1024 or unit == "TB":
+            return f"{size:.1f} {unit}" if unit != "B" else f"{int(size)} B"
+        size /= 1024
+    return f"{int(value)} B"
+
+
+def directory_size_bytes(path: Path) -> int:
+    if not path.exists():
+        return 0
+    result = capture(["du", "-sk", str(path)])
+    if result.returncode != 0 or not result.stdout:
+        return 0
+    try:
+        return int(result.stdout.split()[0]) * 1024
+    except (ValueError, IndexError):
+        return 0
+
+
+def prompt_yes_no(question: str, *, default: bool = False) -> bool:
+    suffix = "[Y/n]" if default else "[y/N]"
+    while True:
+        answer = input(f"{question} {suffix} ").strip().lower()
+        if not answer:
+            return default
+        if answer in {"y", "yes"}:
+            return True
+        if answer in {"n", "no"}:
+            return False
+        print("Answer y or n.")
+
+
+def safe_clean_path(path: Path) -> bool:
+    try:
+        root = HOME.resolve()
+        candidate = path.expanduser().resolve(strict=False)
+        candidate.relative_to(root)
+    except (OSError, ValueError):
+        return False
+    allowed = {
+        target.expanduser().resolve(strict=False)
+        for _, target, _ in CLEAN_PATH_TARGETS.values()
+    }
+    return candidate != root and candidate in allowed
+
+
+def clear_directory_contents(path: Path, *, dry_run: bool = False) -> tuple[int, int]:
+    if not path.exists():
+        return 0, 0
+    if path.is_symlink() or not path.is_dir() or not safe_clean_path(path):
+        print(f"Refusing unsafe cleanup path: {path}")
+        return 0, 1
+    estimated = directory_size_bytes(path)
+    if dry_run:
+        return estimated, 0
+    failures = 0
+    try:
+        entries = list(path.iterdir())
+    except OSError:
+        return 0, 1
+    for entry in entries:
+        try:
+            if entry.is_symlink() or entry.is_file():
+                entry.unlink()
+            elif entry.is_dir():
+                shutil.rmtree(entry)
+        except OSError as exc:
+            failures += 1
+            print(f"  Could not remove {entry}: {exc}")
+    return estimated, failures
+
+
+def clean_command(key: str) -> Optional[list[str]]:
+    if key == "homebrew":
+        binary = shutil.which("brew")
+        return [binary, "cleanup", "-s"] if binary else None
+    if key == "pip":
+        probe = capture([sys.executable, "-m", "pip", "--version"])
+        return [sys.executable, "-m", "pip", "cache", "purge"] if probe.returncode == 0 else None
+    if key == "npm":
+        binary = shutil.which("npm")
+        return [binary, "cache", "clean", "--force"] if binary else None
+    if key == "pnpm":
+        binary = shutil.which("pnpm")
+        return [binary, "store", "prune"] if binary else None
+    if key == "yarn":
+        binary = shutil.which("yarn")
+        return [binary, "cache", "clean"] if binary else None
+    if key == "quicklook":
+        binary = shutil.which("qlmanage")
+        return [binary, "-r", "cache"] if binary else None
+    return None
+
+
+def clean_usage() -> None:
+    print("Usage:")
+    print("  zxt clean")
+    print("  zxt clean --dry-run")
+    print("  zxt clean [categories] [--yes]")
+    print()
+    print("Categories:")
+    print("  --caches     User app caches")
+    print("  --logs       User logs")
+    print("  --trash      Empty Trash")
+    print("  --xcode      Xcode DerivedData")
+    print("  --homebrew   Homebrew cleanup")
+    print("  --pip        Python pip cache")
+    print("  --npm        npm cache")
+    print("  --pnpm       pnpm store prune")
+    print("  --yarn       Yarn cache")
+    print("  --quicklook  Quick Look thumbnail/preview cache")
+    print("  --all        Select every available category")
+    print()
+    print("Without category flags, ZXT asks about each available category.")
+    print("--yes skips only the final confirmation and requires explicit category flags.")
+
+
+def clean(args: list[str]) -> None:
+    if "--help" in args or "-h" in args:
+        clean_usage()
+        return
+
+    category_flags = {f"--{key}": key for key in [*CLEAN_PATH_TARGETS, *CLEAN_COMMAND_DESCRIPTIONS]}
+    allowed_flags = set(category_flags) | {"--all", "--dry-run", "--yes", "--help", "-h"}
+    unknown = [arg for arg in args if arg.startswith("-") and arg not in allowed_flags]
+    if unknown:
+        print("Unknown clean option: " + ", ".join(unknown))
+        clean_usage()
+        sys.exit(2)
+
+    dry_run = "--dry-run" in args
+    assume_yes = "--yes" in args
+    explicit = "--all" in args or any(flag in args for flag in category_flags)
+    if assume_yes and not explicit:
+        print("--yes requires explicit cleanup categories or --all.")
+        sys.exit(2)
+
+    path_sizes = {key: directory_size_bytes(path) for key, (_, path, _) in CLEAN_PATH_TARGETS.items()}
+    command_specs = {key: clean_command(key) for key in CLEAN_COMMAND_DESCRIPTIONS}
+    selected: list[str] = []
+
+    if explicit:
+        if "--all" in args:
+            selected.extend(key for key, (_, path, _) in CLEAN_PATH_TARGETS.items() if path.exists())
+            selected.extend(key for key, spec in command_specs.items() if spec)
+        else:
+            for flag, key in category_flags.items():
+                if flag not in args:
+                    continue
+                if key in CLEAN_PATH_TARGETS:
+                    if CLEAN_PATH_TARGETS[key][1].exists():
+                        selected.append(key)
+                    else:
+                        print(f"Skipping {key}: target does not exist.")
+                elif command_specs.get(key):
+                    selected.append(key)
+                else:
+                    print(f"Skipping {key}: required tool is not installed.")
+    else:
+        print(BANNER)
+        print("Mass cleaner")
+        print("Nothing is selected by default. Each cleanup category is optional.")
+        print("ZXT does not target Documents, Downloads, backups, app preferences, or system files.")
+        print()
+        for key, (label, path, description) in CLEAN_PATH_TARGETS.items():
+            if not path.exists():
+                continue
+            size = human_bytes(path_sizes[key])
+            print(f"{label} - {size}")
+            print(f"  {description}")
+            if prompt_yes_no("  Clean this category?"):
+                selected.append(key)
+            print()
+        for key, (label, description) in CLEAN_COMMAND_DESCRIPTIONS.items():
+            if not command_specs.get(key):
+                continue
+            print(label)
+            print(f"  {description}")
+            if prompt_yes_no("  Run this cleanup?"):
+                selected.append(key)
+            print()
+
+    selected = list(dict.fromkeys(selected))
+    if not selected:
+        print("No cleanup categories selected.")
+        return
+
+    print()
+    print("Selected cleanup:")
+    for key in selected:
+        if key in CLEAN_PATH_TARGETS:
+            label = CLEAN_PATH_TARGETS[key][0]
+            print(f"  - {label}: about {human_bytes(path_sizes[key])}")
+        else:
+            print(f"  - {CLEAN_COMMAND_DESCRIPTIONS[key][0]}")
+
+    if dry_run:
+        print()
+        print("Dry run complete. No files or caches were changed.")
+        return
+
+    print()
+    print("Selected files/caches will be permanently removed.")
+    if not assume_yes and not prompt_yes_no("Continue with cleanup?"):
+        print("Cleanup cancelled.")
+        return
+
+    try:
+        free_before = shutil.disk_usage(HOME).free
+    except OSError:
+        free_before = 0
+
+    failures = 0
+    estimated_path_bytes = 0
+    print()
+    for key in selected:
+        if key in CLEAN_PATH_TARGETS:
+            label, path, _ = CLEAN_PATH_TARGETS[key]
+            print(f"Cleaning {label}...")
+            estimated, failed = clear_directory_contents(path)
+            estimated_path_bytes += estimated
+            failures += failed
+        else:
+            label = CLEAN_COMMAND_DESCRIPTIONS[key][0]
+            command = command_specs.get(key)
+            if not command:
+                print(f"Skipping {label}: tool is no longer available.")
+                continue
+            print(f"Running {label}...")
+            result = run(command, quiet=False)
+            if result.returncode != 0:
+                failures += 1
+                print(f"  {label} returned exit code {result.returncode}.")
+
+    try:
+        free_after = shutil.disk_usage(HOME).free
+    except OSError:
+        free_after = free_before
+    recovered = max(0, free_after - free_before)
+
+    print()
+    print("Cleanup complete.")
+    print(f"Estimated selected path data: {human_bytes(estimated_path_bytes)}")
+    if free_before:
+        print(f"Disk space recovered:         {human_bytes(recovered)}")
+    print(f"Cleanup errors:               {failures}")
+    if failures:
+        print("Some protected or in-use files may have been skipped.")
+
+
 def usage() -> None:
     print(f"ZXT macOS Debloat {VERSION}")
     print("Usage:")
     print("  zxt configure")
+    print("  zxt clean [--dry-run]")
     print("  zxt apply [--dry-run]")
     print("  zxt status")
     print("  zxt list")
@@ -615,6 +886,8 @@ def main() -> None:
         list_services()
     elif command == "doctor":
         doctor()
+    elif command == "clean":
+        clean(args)
     elif command == "configure":
         configure(defaults="--defaults" in args, apply_after="--no-apply" not in args)
     elif command == "config":
