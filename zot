@@ -1,0 +1,33 @@
+#!/bin/bash
+set -u
+
+VERSION="3.0.0"
+HOME_DIR="$HOME"
+BASE_DIR="${ZOT_HOME:-$HOME/.zot}"
+PRESETS_DIR="$BASE_DIR/presets"
+STATE_DIR="$BASE_DIR/state"
+CONFIG_FILE="$BASE_DIR/config"
+SERVICE_STATE="$STATE_DIR/disabled-services.txt"
+SPOTLIGHT_STATE="$STATE_DIR/spotlight-changed.txt"
+STARTUP_STATE="$STATE_DIR/startup-disabled.txt"
+HISTORY_FILE="$STATE_DIR/operations.log"
+UID_NUM="$(id -u)"
+ESC="$(printf '\033')"
+RESET="${ESC}[0m"
+BOLD="${ESC}[1m"
+DIM="${ESC}[2m"
+BLUE="${ESC}[38;5;75m"
+CYAN="${ESC}[38;5;81m"
+GREEN="${ESC}[38;5;78m"
+YELLOW="${ESC}[38;5;221m"
+RED="${ESC}[38;5;203m"
+GRAY="${ESC}[38;5;245m"
+
+mkdir -p "$STATE_DIR" 2>/dev/null || true
+
+for module in common clean analyze system hub; do
+  file="$BASE_DIR/lib/$module.sh"
+  [ -f "$file" ] || { echo "Zot install is incomplete: missing $file" >&2; exit 1; }
+  . "$file"
+done
+main "$@"
