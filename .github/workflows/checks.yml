@@ -9,17 +9,18 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Check Python syntax
-        run: python3 -m py_compile debloat
       - name: Check shell syntax
         run: |
+          bash -n zot
+          bash -n lib/*.sh
           bash -n install.sh
           bash -n uninstall.sh
-      - name: Run unit checks
-        run: python3 tests/test_debloat.py -v
+          bash -n tests/test_zot.sh
+      - name: Run Zot smoke tests
+        run: |
+          chmod +x zot tests/test_zot.sh
+          tests/test_zot.sh
       - name: Check CLI basics
         run: |
-          chmod +x debloat
-          ./debloat version
-          ./debloat help
-          ./debloat apply --dry-run
+          ZOT_HOME="$PWD" ./zot version
+          ZOT_HOME="$PWD" ./zot --help
