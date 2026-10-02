@@ -224,7 +224,12 @@ status_plain(){
   printf 'Spotlight actual: %s\n' "$spotlight"
   printf 'Services disabled by Zot: %s\n' "$services"
   printf 'Startup items disabled by Zot: %s\n' "$startup"
-  printf 'Zot auto-run/background helper: off\n'
+  local login_tw="OFF" login_cl="OFF"
+  login_tweaks_enabled && login_tw="ON"
+  login_clean_enabled && login_cl="ON"
+  printf 'Login Tweaks Auto Apply: %s\n' "$login_tw"
+  printf 'Login Cleaning Auto Run: %s\n' "$login_cl"
+  printf 'Persistent background process: none\n'
   printf 'Last optimization: %s\n' "$last_opt"
 }
 
@@ -254,7 +259,7 @@ popup_hub(){
   local choice
   while :; do
     choice="$(osascript <<'APPLESCRIPT' 2>/dev/null || true
-set choices to {"Status — configuration overview", "Performance — live CPU/RAM", "Scan — read-only storage scan", "Clean — cleanup hub", "Analyze — storage explorer", "Apps — uninstall and leftovers", "Startup — background/login items", "Optimize — maintenance tasks", "Install — curated apps", "Services — macOS feature controls", "Theme — terminal colors", "Quit"}
+set choices to {"Status — configuration overview", "Performance — live CPU/RAM", "Scan — read-only storage scan", "Clean — cleanup hub", "Analyze — storage explorer", "Apps — uninstall and leftovers", "Startup — background/login items", "Login — Zot auto-run items", "Optimize — maintenance tasks", "Install — curated apps", "Services — macOS feature controls", "Theme — terminal colors", "Quit"}
 set picked to choose from list choices with title "Zot" with prompt "macOS Utility Hub" default items {"Status — configuration overview"} OK button name "Open" cancel button name "Quit"
 if picked is false then return "Quit"
 return item 1 of picked
@@ -276,6 +281,7 @@ APPLESCRIPT
       "Analyze"*) analyze_menu;;
       "Apps"*) apps_screen;;
       "Startup"*) startup_screen;;
+      "Login"*) login_hub;;
       "Optimize"*) optimize_screen;;
       "Install"*) install_menu;;
       "Services"*) services_screen;;
@@ -333,7 +339,8 @@ hub(){
       "Clean — caches, browsers, developer files, projects" \
       "Analyze Storage — large files, installers, backups" \
       "Apps & Leftovers — uninstall apps and related files" \
-      "Startup & Background — manage login/background jobs" \
+      "Startup & Background — manage existing login/background jobs" \
+      "Login Items — auto-reapply tweaks or auto-clean at login" \
       "Optimize — safe macOS maintenance tasks" \
       "Install Apps — curated browsers, utilities, developer tools" \
       "Services & Features — profile, Siri, AI, Spotlight" \
@@ -349,11 +356,12 @@ hub(){
       4) analyze_menu;;
       5) apps_screen;;
       6) startup_screen;;
-      7) optimize_screen;;
-      8) install_menu;;
-      9) services_screen;;
-      10) theme_menu;;
-      11) tools_menu;;
+      7) login_hub;;
+      8) optimize_screen;;
+      9) install_menu;;
+      10) services_screen;;
+      11) theme_menu;;
+      12) tools_menu;;
       *) clear; return;;
     esac
   done
@@ -371,7 +379,8 @@ Commands:
   zot clean                   cache and rebuildable-file cleanup hub
   zot analyze                 large-file, installer, and backup analyzer
   zot apps                    app uninstaller and leftover reviewer
-  zot startup                 login/background item manager
+  zot startup                 inspect existing login/background items
+  zot login                   configure Zot tweaks/cleaning at login
   zot optimize                safe maintenance and optimization tasks
   zot install                 curated app installer
   zot services                macOS service/profile controls
@@ -391,6 +400,7 @@ Hyphen shortcuts:
   zot-analyze                 storage analyzer
   zot-apps                    app uninstaller
   zot-startup                 startup manager
+  zot-login                   Zot login-items hub
   zot-optimize                optimization hub
   zot-install                 app installer
   zot-services                service controls
@@ -406,6 +416,10 @@ EOF
 restore_all(){
   header
   confirm "Restore all startup and service changes recorded by Zot?" || return 0
+  if login_tweaks_enabled || login_system_enabled; then
+    printf '\n%bDisabling Tweaks Auto Apply first so restored changes stay restored.%b\n' "$YELLOW" "$RESET"
+    login_tweaks_disable
+  fi
   services_restore
   if [ -s "$STARTUP_STATE" ]; then
     while IFS='|' read -r kind label path; do
@@ -443,6 +457,7 @@ main(){
     analyze) analyze_menu;;
     apps) apps_screen;;
     startup) startup_screen;;
+    login) login_hub;;
     optimize) optimize_screen;;
     install) install_menu;;
     services) services_screen;;
@@ -452,6 +467,10 @@ main(){
     history) history_screen;;
     restore) restore_all;;
     update) update_zot;;
+    login-run-tweaks) login_apply_tweaks user;;
+    login-run-system) login_apply_tweaks system;;
+    login-run-cleaning) login_clean_run;;
+    login-disable-all) login_disable_all;;
     reapply-user) services_apply >/dev/null 2>&1 || true;;
     version|--version|-v) echo "$VERSION";;
     help|--help|-h) usage;;
