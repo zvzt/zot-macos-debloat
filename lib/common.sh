@@ -9,7 +9,7 @@ path_kb(){
   du -sk "$1" 2>/dev/null | awk 'NR==1{print $1+0}'
 }
 path_bytes(){ echo $(( $(path_kb "$1") * 1024 )); }
-free_bytes(){ df -k / 2>/dev/null | awk 'NR==2{print $4*1024}'; }
+free_bytes(){ local k; k="$(df -k / 2>/dev/null | awk 'NR==2{print $4}')"; [ -n "$k" ] || k=0; echo $((k * 1024)); }
 record(){
   mkdir -p "$STATE_DIR"
   printf '%s|%s|%s|%s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$1" "${2//|/ }" "${3:-0}" >> "$HISTORY_FILE"
