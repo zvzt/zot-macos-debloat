@@ -38,6 +38,11 @@ legacy_artifacts(){
     [ -e "$p" ] || [ -L "$p" ] || continue
     printf '%s\n' "$p"
   done
+
+  launchctl print "gui/$UID_NUM/com.zot.macos-debloat" >/dev/null 2>&1 && printf '%s\n' "loaded login job: com.zot.macos-debloat"
+  launchctl print "gui/$UID_NUM/com.zxt.macos-debloat" >/dev/null 2>&1 && printf '%s\n' "loaded login job: com.zxt.macos-debloat"
+  launchctl print "system/com.zot.macos-debloat.system" >/dev/null 2>&1 && printf '%s\n' "loaded background job: com.zot.macos-debloat.system"
+  launchctl print "system/com.zxt.macos-debloat.system" >/dev/null 2>&1 && printf '%s\n' "loaded background job: com.zxt.macos-debloat.system"
 }
 
 restore_legacy_state(){
@@ -89,7 +94,9 @@ remove_previous_autorun(){
     launchctl bootout "gui/$UID_NUM" "$HOME/Library/LaunchAgents/com.zxt.macos-debloat.plist" >/dev/null 2>&1 || true
   fi
 
-  if [ -f "/Library/LaunchAgents/com.zot.macos-debloat.plist" ] || \
+  if launchctl print system/com.zot.macos-debloat.system >/dev/null 2>&1 || \
+     launchctl print system/com.zxt.macos-debloat.system >/dev/null 2>&1 || \
+     [ -f "/Library/LaunchAgents/com.zot.macos-debloat.plist" ] || \
      [ -f "/Library/LaunchAgents/com.zxt.macos-debloat.plist" ] || \
      [ -f "/Library/LaunchDaemons/com.zot.macos-debloat.system.plist" ] || \
      [ -f "/Library/LaunchDaemons/com.zxt.macos-debloat.system.plist" ]; then
