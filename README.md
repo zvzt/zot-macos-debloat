@@ -1,4 +1,4 @@
-# Zot
+# Zot — macOS Debloat
 
 A lightweight terminal hub for cleaning, analyzing, maintaining, and configuring macOS.
 
@@ -145,11 +145,34 @@ Available maintenance tasks are explicit and individually selectable.
 
 ## Install Apps
 
-The Install section is a curated list of common software grouped by category.
+The Install section is intentionally small and curated. Every item includes a short description in the UI.
 
-If Homebrew is already installed, Zot uses it for selected applications. If Homebrew is not installed, Zot opens the applications' official download pages instead. Zot does not silently install a package manager.
+### Browsers
 
-Current categories include browsers, utilities, developer tools, communication, media, and gaming.
+- **Zen** — privacy-focused Firefox-based browser
+- **Firefox** — open-source web browser
+- **LibreWolf** — hardened privacy-focused Firefox fork
+- **Tor Browser** — anonymous browsing over the Tor network
+
+### Utilities
+
+- **iTerm2** — advanced terminal emulator
+- **Mousecape** — custom cursor manager
+- **Raycast** — launcher and productivity tool
+- **Ice** — menu bar manager
+- **LuLu** — outbound firewall
+- **BetterDisplay** — display manager
+- **OnyX** — macOS maintenance utility
+
+### Developer
+
+- **Visual Studio Code** — code editor
+- **GitHub CLI** — GitHub from Terminal
+- **Python** — programming language and runtime
+- **Node.js** — JavaScript runtime
+- **Xcode** — Apple app development IDE
+
+If Homebrew is already installed, Zot uses it for supported selections. If Homebrew is not installed, Zot opens official download pages instead. Mousecape and Xcode always open their official download/developer pages. Zot never silently installs a package manager.
 
 ## Service Profiles
 
@@ -163,11 +186,29 @@ The existing service optimizer remains available inside the Zot hub.
 
 Use the restore option to revert launchd changes recorded by Zot.
 
+## Interface & Appearance
+
+The terminal UI uses a bordered header, cleaner selection markers, descriptions beside menu actions, and a configurable accent theme.
+
+Run `zot theme` or `zot-theme` to choose Cyan, Purple, Blue, Green, Amber, Red, or Mono.
+
+Run `zot gui` or `zot-gui` for a lightweight native macOS popup launcher built with system dialogs. It adds no framework or background process; deeper interactive operations still open/use the terminal UI.
+
 ## Commands
+
+Every command has a short description in `zot --help`. Common shortcuts include:
 
 ```text
 zot
 zot status
+zot performance
+zot gui
+zot theme
+zot-status
+zot-performance
+zot-clean
+zot-optimize
+zot-install
 zot scan
 zot clean
 zot analyze
