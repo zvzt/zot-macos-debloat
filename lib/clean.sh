@@ -3,7 +3,7 @@ scan_recoverable(){
   for p in "$HOME/Library/Caches" "$HOME/Library/Logs" "$HOME/.Trash" "$HOME/Library/Developer/Xcode/DerivedData"; do
     [ -e "$p" ] && total=$((total + $(path_bytes "$p")))
   done
-  for p in     "$HOME/Library/Caches/com.apple.Safari"     "$HOME/Library/Caches/Google/Chrome"     "$HOME/Library/Caches/Firefox"     "$HOME/Library/Caches/BraveSoftware/Brave-Browser"     "$HOME/Library/Caches/Microsoft Edge"     "$HOME/Library/Caches/company.thebrowser.Browser"; do
+  for p in "$HOME/Library/Caches/app.zen-browser.zen" "$HOME/Library/Caches/Firefox" "$HOME/Library/Caches/LibreWolf"; do
     [ -e "$p" ] && total=$((total + $(path_bytes "$p")))
   done
   echo "$total"
@@ -20,9 +20,9 @@ scan_screen(){
   printf '\n%bThis is a read-only estimate. Clean/Analyze screens review exact items before changes.%b\n\n' "$GRAY" "$RESET"; press_enter
 }
 browser_targets(){
-  BROWSER_NAMES=("Safari" "Google Chrome" "Firefox" "Brave" "Microsoft Edge" "Arc")
-  BROWSER_PATHS=("$HOME/Library/Caches/com.apple.Safari" "$HOME/Library/Caches/Google/Chrome" "$HOME/Library/Caches/Firefox" "$HOME/Library/Caches/BraveSoftware/Brave-Browser" "$HOME/Library/Caches/Microsoft Edge" "$HOME/Library/Caches/company.thebrowser.Browser")
-  BROWSER_PROCS=("Safari" "Google Chrome" "firefox" "Brave Browser" "Microsoft Edge" "Arc")
+  BROWSER_NAMES=("Zen" "Firefox" "LibreWolf")
+  BROWSER_PATHS=("$HOME/Library/Caches/app.zen-browser.zen" "$HOME/Library/Caches/Firefox" "$HOME/Library/Caches/LibreWolf")
+  BROWSER_PROCS=("Zen" "firefox" "LibreWolf")
 }
 clean_basic(){
   local mode="$1"; local -a names paths choices
@@ -90,11 +90,11 @@ purge_projects(){
   printf '\n%bProject artifacts removed.%b\n\n' "$GREEN" "$RESET"; press_enter
 }
 clean_aged_caches(){
-  menu "Age-based Cache Clean" "Older than 7 days" "Older than 30 days" "Older than 90 days" "Back"; local days
+  menu "Age-based Cache Clean" "7 days — remove older cache files" "30 days — conservative cleanup" "90 days — very conservative cleanup" "Back — return to Clean"; local days
   case "$MENU_RESULT" in 0) days=7;; 1) days=30;; 2) days=90;; *) return;; esac
   header; printf '%bThis removes only cache files older than %s days, then prunes empty cache folders.%b\n\n' "$BOLD" "$days" "$RESET"; confirm "Continue?" || return
   local before after; before="$(free_bytes)"; find "$HOME/Library/Caches" -type f -mtime +"$days" -delete 2>/dev/null || true; find "$HOME/Library/Caches" -type d -empty -delete 2>/dev/null || true; after="$(free_bytes)"
   record clean "aged-cache:${days}d" "$((after-before))"; printf '\n%bRecovered approximately %s.%b\n\n' "$GREEN" "$(fmt_bytes $((after-before)))" "$RESET"; press_enter
 }
 deep_clean_wizard(){ local before after; before="$(free_bytes)"; clean_basic custom; clean_browsers; clean_dev; after="$(free_bytes)"; header; printf '%bDeep Clean wizard finished.%b\n\n' "$GREEN" "$RESET"; printf 'Net free-space change: %s\n\n' "$(fmt_bytes $((after-before)))"; press_enter; }
-clean_menu(){ while :; do menu "Clean" "Quick Clean" "Deep Clean Wizard" "General Caches / Logs / Trash" "Age-based Cache Clean" "Browser Caches" "Developer Caches" "Project Artifacts" "Back"; case "$MENU_RESULT" in 0) clean_basic quick;; 1) deep_clean_wizard;; 2) clean_basic custom;; 3) clean_aged_caches;; 4) clean_browsers;; 5) clean_dev;; 6) purge_projects;; *) return;; esac; done; }
+clean_menu(){ while :; do menu "Clean" "Quick Clean — caches, logs, and Trash" "Deep Clean Wizard — guided multi-area cleanup" "General Cleanup — caches, logs, Trash, Xcode" "Age-based Cache Clean — remove only older cache files" "Browser Caches — Zen, Firefox, LibreWolf" "Developer Caches — package managers and Xcode" "Project Artifacts — old rebuildable build folders" "Back — return to the hub"; case "$MENU_RESULT" in 0) clean_basic quick;; 1) deep_clean_wizard;; 2) clean_basic custom;; 3) clean_aged_caches;; 4) clean_browsers;; 5) clean_dev;; 6) purge_projects;; *) return;; esac; done; }
