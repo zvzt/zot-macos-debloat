@@ -15,8 +15,9 @@ ZOT_HOME="$ROOT" "$ROOT/zot" --help | grep -q 'zot-status'
 ZOT_HOME="$ROOT" "$ROOT/zot" --help | grep -q 'zot gui'
 
 ln -sf "$ROOT/zot" "$TMP/zot-status"
-ZOT_HOME="$ROOT" "$TMP/zot-status" | grep -q 'Spotlight actual:'
-ZOT_HOME="$ROOT" "$TMP/zot-status" | grep -q 'Zot auto-run/background helper: off'
+STATUS_OUTPUT="$(ZOT_HOME="$ROOT" "$TMP/zot-status")"
+grep -q 'Spotlight actual:' <<< "$STATUS_OUTPUT"
+grep -q 'Zot auto-run/background helper: off' <<< "$STATUS_OUTPUT"
 
 ! grep -qi 'Python 3 is required' "$ROOT/install.sh"
 ! grep -qi 'pip install' "$ROOT/install.sh"
