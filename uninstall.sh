@@ -1,12 +1,23 @@
 #!/bin/bash
 set -euo pipefail
 INSTALL="$HOME/.zot"
+ALIASES=(
+  zot zot-status zot-performance zot-scan zot-clean zot-analyze zot-apps
+  zot-startup zot-optimize zot-install zot-services zot-theme zot-gui
+  zot-doctor zot-history zot-restore zot-update
+)
 
 printf '\nZot - Uninstall\n===============\n\n'
 if [ -x "$INSTALL/zot" ]; then
   echo "Restoring Zot-managed startup/service changes first..."
   "$INSTALL/zot" restore || true
 fi
-if [ -e /usr/local/bin/zot ] || [ -L /usr/local/bin/zot ]; then sudo rm -f /usr/local/bin/zot; fi
+
+for name in "${ALIASES[@]}"; do
+  if [ -e "/usr/local/bin/$name" ] || [ -L "/usr/local/bin/$name" ]; then
+    sudo rm -f "/usr/local/bin/$name"
+  fi
+done
+
 rm -rf "$INSTALL"
 echo "Zot has been uninstalled."
