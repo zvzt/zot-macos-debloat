@@ -1,5 +1,20 @@
 # Changelog
 
+## 3.1.0
+
+- Simplified the Install section to Browsers, Utilities, and Developer.
+- Browsers now contain only Zen, Firefox, LibreWolf, and Tor Browser.
+- Utilities now contain iTerm2, Mousecape, Raycast, Ice, LuLu, BetterDisplay, and OnyX.
+- Developer now includes Xcode as an official Apple website action.
+- Added short descriptions throughout the hub and installer catalog.
+- Added Cyan, Purple, Blue, Green, Amber, Red, and Mono terminal themes.
+- Refined the terminal UI with a bordered header and cleaner selections.
+- Added a lightweight native macOS popup launcher via `zot gui` / `zot-gui`.
+- Changed destructive confirmations to explicit `[Y/N]` with no Enter default.
+- Added `zot-status` and other `zot-*` shortcut commands.
+- `zot-status` reports Spotlight, service profile, Siri/AI preferences, Zot-managed disabled jobs, background-helper state, and the last optimization action.
+- Browser cache cleanup no longer targets Chrome, Safari, Brave, Edge, or Arc.
+
 ## 3.0.0
 
 - Rebuilt the project around the `zot` terminal hub.
@@ -22,11 +37,3 @@
 ## 2.1.0
 
 - Added interactive mass cleaner and cleanup safety checks.
-
-## 2.0.1
-
-- Hardened launchd disabled-state parsing and removed the old root helper.
-
-## 2.0.0
-
-- Added Balanced/Aggressive profiles, optional Siri/Apple Intelligence controls, Spotlight controls, dry-run support, diagnostics, state tracking, and restore.
