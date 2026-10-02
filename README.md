@@ -11,7 +11,7 @@ macOS Debloat defaults to a **Balanced** profile and lets you choose whether to 
 Run this in Terminal:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/zvzt/macos-debloat/main/install.sh)
+bash <(curl -fsSL -H "Accept: application/vnd.github.raw+json" "https://api.github.com/repositories/1356850441/contents/install.sh?ref=main")
 ```
 
 The first install opens a setup wizard. Existing installs keep their saved configuration when updated.
@@ -243,7 +243,7 @@ Restart macOS afterward so restored services can return normally.
 ## Uninstall
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/zvzt/macos-debloat/main/uninstall.sh)
+bash <(curl -fsSL -H "Accept: application/vnd.github.raw+json" "https://api.github.com/repositories/1356850441/contents/uninstall.sh?ref=main")
 ```
 
 The uninstaller first calls `debloat restore`, removes macOS Debloat's user LaunchAgent, any legacy macOS Debloat system LaunchDaemon, and the command symlink, then removes `~/.macos-debloat`.
