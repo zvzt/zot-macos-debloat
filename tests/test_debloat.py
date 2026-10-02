@@ -8,39 +8,39 @@ from pathlib import Path
 from unittest import mock
 
 ROOT=Path(__file__).resolve().parents[1]
-LOADER=importlib.machinery.SourceFileLoader("zxt_module",str(ROOT/"zxt"))
+LOADER=importlib.machinery.SourceFileLoader("debloat_module",str(ROOT/"debloat"))
 SPEC=importlib.util.spec_from_loader(LOADER.name,LOADER)
-zxt=importlib.util.module_from_spec(SPEC)
-LOADER.exec_module(zxt)
+debloat=importlib.util.module_from_spec(SPEC)
+LOADER.exec_module(debloat)
 
-class ZxtTests(unittest.TestCase):
+class DebloatTests(unittest.TestCase):
     def test_actual_disabled_parses_true_and_false(self):
         with mock.patch.object(
-            zxt,
+            debloat,
             "capture",
             return_value=subprocess.CompletedProcess([],0,'disabled services = {\n    "com.test" => true\n}\n',""),
         ):
-            self.assertTrue(zxt.actual_disabled("system","com.test"))
+            self.assertTrue(debloat.actual_disabled("system","com.test"))
         with mock.patch.object(
-            zxt,
+            debloat,
             "capture",
             return_value=subprocess.CompletedProcess([],0,'disabled services = {\n    "com.test" => false\n}\n',""),
         ):
-            self.assertFalse(zxt.actual_disabled("system","com.test"))
+            self.assertFalse(debloat.actual_disabled("system","com.test"))
 
     def test_actual_disabled_handles_legacy_wording(self):
         with mock.patch.object(
-            zxt,
+            debloat,
             "capture",
             return_value=subprocess.CompletedProcess([],0,'"com.test" => disabled\n',""),
         ):
-            self.assertTrue(zxt.actual_disabled("gui/501","com.test"))
+            self.assertTrue(debloat.actual_disabled("gui/501","com.test"))
 
     def test_state_round_trip(self):
-        entry=zxt.encode_state("system","com.example.service")
+        entry=debloat.encode_state("system","com.example.service")
         self.assertEqual(entry,"system|com.example.service")
-        self.assertEqual(zxt.decode_state(entry),("system","com.example.service"))
-        self.assertEqual(zxt.decode_state("legacy.label"),(None,"legacy.label"))
+        self.assertEqual(debloat.decode_state(entry),("system","com.example.service"))
+        self.assertEqual(debloat.decode_state("legacy.label"),(None,"legacy.label"))
 
     def test_invalid_config_falls_back_to_safe_defaults(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -51,16 +51,16 @@ class ZxtTests(unittest.TestCase):
                 "intelligence":"broken",
                 "spotlight":"broken",
             }))
-            with mock.patch.object(zxt,"CONFIG_FILE",config_path):
-                config=zxt.load_config()
-            self.assertEqual(config,zxt.DEFAULT_CONFIG)
+            with mock.patch.object(debloat,"CONFIG_FILE",config_path):
+                config=debloat.load_config()
+            self.assertEqual(config,debloat.DEFAULT_CONFIG)
 
     def test_dry_run_does_not_mutate_state(self):
-        with mock.patch.object(zxt,"domains_for",return_value={"user"}), \
-             mock.patch.object(zxt,"restore_entry") as restore_entry, \
-             mock.patch.object(zxt,"save_state") as save_state, \
-             mock.patch.object(zxt,"apply_spotlight") as apply_spotlight:
-            zxt.apply(dry_run=True)
+        with mock.patch.object(debloat,"domains_for",return_value={"user"}), \
+             mock.patch.object(debloat,"restore_entry") as restore_entry, \
+             mock.patch.object(debloat,"save_state") as save_state, \
+             mock.patch.object(debloat,"apply_spotlight") as apply_spotlight:
+            debloat.apply(dry_run=True)
         restore_entry.assert_not_called()
         save_state.assert_not_called()
         apply_spotlight.assert_not_called()
@@ -73,9 +73,9 @@ class ZxtTests(unittest.TestCase):
 
 
     def test_human_bytes(self):
-        self.assertEqual(zxt.human_bytes(0),"0 B")
-        self.assertEqual(zxt.human_bytes(1024),"1.0 KB")
-        self.assertEqual(zxt.human_bytes(1024*1024),"1.0 MB")
+        self.assertEqual(debloat.human_bytes(0),"0 B")
+        self.assertEqual(debloat.human_bytes(1024),"1.0 KB")
+        self.assertEqual(debloat.human_bytes(1024*1024),"1.0 MB")
 
     def test_clean_dry_run_keeps_files(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -85,11 +85,11 @@ class ZxtTests(unittest.TestCase):
             sample=target/"sample.cache"
             sample.write_text("data")
             targets={"caches":("User app caches",target,"test")}
-            with mock.patch.object(zxt,"HOME",home), \
-                 mock.patch.object(zxt,"CLEAN_PATH_TARGETS",targets), \
-                 mock.patch.object(zxt,"CLEAN_COMMAND_DESCRIPTIONS",{}), \
-                 mock.patch.object(zxt,"clean_command",return_value=None):
-                zxt.clean(["--caches","--dry-run"])
+            with mock.patch.object(debloat,"HOME",home), \
+                 mock.patch.object(debloat,"CLEAN_PATH_TARGETS",targets), \
+                 mock.patch.object(debloat,"CLEAN_COMMAND_DESCRIPTIONS",{}), \
+                 mock.patch.object(debloat,"clean_command",return_value=None):
+                debloat.clean(["--caches","--dry-run"])
             self.assertTrue(sample.exists())
 
     def test_clean_directory_only_clears_allowed_target(self):
@@ -102,9 +102,9 @@ class ZxtTests(unittest.TestCase):
             nested.mkdir()
             (nested/"two").write_text("y")
             targets={"caches":("User app caches",target,"test")}
-            with mock.patch.object(zxt,"HOME",home), \
-                 mock.patch.object(zxt,"CLEAN_PATH_TARGETS",targets):
-                _,failures=zxt.clear_directory_contents(target)
+            with mock.patch.object(debloat,"HOME",home), \
+                 mock.patch.object(debloat,"CLEAN_PATH_TARGETS",targets):
+                _,failures=debloat.clear_directory_contents(target)
             self.assertEqual(failures,0)
             self.assertEqual(list(target.iterdir()),[])
 

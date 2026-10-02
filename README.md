@@ -1,17 +1,17 @@
-# ZXT macOS Debloat
+# macOS Debloat
 
 A configurable macOS background-service optimizer focused on reducing optional background work without blindly disabling core macOS infrastructure.
 
-ZXT defaults to a **Balanced** profile and lets you choose whether to keep or disable **Siri**, **Apple Intelligence**, and **Spotlight indexing**.
+macOS Debloat defaults to a **Balanced** profile and lets you choose whether to keep or disable **Siri**, **Apple Intelligence**, and **Spotlight indexing**.
 
-> Designed primarily for personal Apple Silicon Macs. Service labels vary between macOS releases, so ZXT automatically skips labels that are not present on your system.
+> Designed primarily for personal Apple Silicon Macs. Service labels vary between macOS releases, so macOS Debloat automatically skips labels that are not present on your system.
 
 ## Quick install / update
 
 Run this in Terminal:
 
 ```bash
-bash <(curl -fsSL https://zxt.lol/debloat/install.sh)
+bash <(curl -fsSL -H "Accept: application/vnd.github.raw+json" "https://api.github.com/repositories/1356850441/contents/install.sh?ref=main")
 ```
 
 The first install opens a setup wizard. Existing installs keep their saved configuration when updated.
@@ -36,18 +36,18 @@ The installer asks four things:
    - `keep` — Apple Intelligence services stay available.
    - `disable` — disables the optional Apple Intelligence service module.
 4. **Spotlight indexing**
-   - `keep` — recommended. ZXT leaves Spotlight indexing alone.
+   - `keep` — recommended. macOS Debloat leaves Spotlight indexing alone.
    - `off` — disables indexing on the startup volume using `mdutil`. Spotlight file-content search may be reduced until indexing is re-enabled.
 
-ZXT does **not** disable Spotlight's core launchd infrastructure. Spotlight indexing is controlled separately and can be restored at any time.
+macOS Debloat does **not** disable Spotlight's core launchd infrastructure. Spotlight indexing is controlled separately and can be restored at any time.
 
 ### Recommended Spotlight alternative: Raycast
 
-If you prefer a launcher-style workflow, ZXT recommends [Raycast](https://www.raycast.com/) as an alternative to using Spotlight for everyday launching and quick actions.
+If you prefer a launcher-style workflow, macOS Debloat recommends [Raycast](https://www.raycast.com/) as an alternative to using Spotlight for everyday launching and quick actions.
 
 Raycast provides app launching, file search, Quicklinks, extensions, script commands, window management, snippets, and other productivity tools.
 
-If you choose `zxt spotlight off`, Raycast can still be useful as your main launcher, but it is not a complete replacement for every Spotlight indexing/search feature. Some macOS file-search behavior can still depend on system indexing.
+If you choose `debloat spotlight off`, Raycast can still be useful as your main launcher, but it is not a complete replacement for every Spotlight indexing/search feature. Some macOS file-search behavior can still depend on system indexing.
 
 Apple documents Spotlight privacy/indexing behavior here: [Apple Support — Spotlight search privacy](https://support.apple.com/guide/mac-help/mchl1bb43b84/mac).
 
@@ -56,55 +56,55 @@ Apple documents Spotlight privacy/indexing behavior here: [Apple Support — Spo
 Show your current configuration and status:
 
 ```bash
-zxt status
+debloat status
 ```
 
 Open the configuration wizard again:
 
 ```bash
-zxt configure
+debloat configure
 ```
 
 Open the interactive mass cleaner:
 
 ```bash
-zxt clean
+debloat clean
 ```
 
-Preview what ZXT would change without changing anything:
+Preview what macOS Debloat would change without changing anything:
 
 ```bash
-zxt apply --dry-run
+debloat apply --dry-run
 ```
 
 Apply your saved configuration:
 
 ```bash
-zxt apply
+debloat apply
 ```
 
 Check the installation and required macOS tools:
 
 ```bash
-zxt doctor
+debloat doctor
 ```
 
 List selected services and whether they exist on this macOS build:
 
 ```bash
-zxt list
+debloat list
 ```
 
-Restore changes made by ZXT:
+Restore changes made by macOS Debloat:
 
 ```bash
-zxt restore
+debloat restore
 ```
 
 Show every command:
 
 ```bash
-zxt help
+debloat help
 ```
 
 
@@ -113,10 +113,10 @@ zxt help
 Run:
 
 ```bash
-zxt clean
+debloat clean
 ```
 
-Nothing is selected by default. ZXT shows each available category, explains what it removes, and asks before selecting it. After the questions, it shows one combined summary and asks again before deleting anything.
+Nothing is selected by default. macOS Debloat shows each available category, explains what it removes, and asks before selecting it. After the questions, it shows one combined summary and asks again before deleting anything.
 
 Available cleanup categories:
 
@@ -134,21 +134,21 @@ Available cleanup categories:
 Preview a cleanup without changing anything:
 
 ```bash
-zxt clean --dry-run
+debloat clean --dry-run
 ```
 
 You can also select categories directly:
 
 ```bash
-zxt clean --caches --logs --homebrew
-zxt clean --trash --xcode
-zxt clean --all
+debloat clean --caches --logs --homebrew
+debloat clean --trash --xcode
+debloat clean --all
 ```
 
 Direct category flags still require the final confirmation. For deliberate non-interactive use, add `--yes`:
 
 ```bash
-zxt clean --caches --logs --yes
+debloat clean --caches --logs --yes
 ```
 
 `--yes` is rejected unless cleanup categories were explicitly supplied.
@@ -160,35 +160,35 @@ The cleaner does not target Documents, Downloads, iPhone backups, application pr
 Switch profiles:
 
 ```bash
-zxt profile balanced
-zxt profile aggressive
+debloat profile balanced
+debloat profile aggressive
 ```
 
 Keep or disable Siri:
 
 ```bash
-zxt siri keep
-zxt siri disable
+debloat siri keep
+debloat siri disable
 ```
 
 Keep or disable Apple Intelligence:
 
 ```bash
-zxt intelligence keep
-zxt intelligence disable
+debloat intelligence keep
+debloat intelligence disable
 ```
 
 Spotlight controls:
 
 ```bash
-zxt spotlight status
-zxt spotlight keep
-zxt spotlight off
-zxt spotlight on
-zxt spotlight reindex
+debloat spotlight status
+debloat spotlight keep
+debloat spotlight off
+debloat spotlight on
+debloat spotlight reindex
 ```
 
-`zxt spotlight keep` means "leave Spotlight alone" and restores indexing only if ZXT previously disabled it. `zxt spotlight on` explicitly enables indexing. `zxt spotlight reindex` rebuilds the Spotlight index and can temporarily increase CPU and disk activity.
+`debloat spotlight keep` means "leave Spotlight alone" and restores indexing only if macOS Debloat previously disabled it. `debloat spotlight on` explicitly enables indexing. `debloat spotlight reindex` rebuilds the Spotlight index and can temporarily increase CPU and disk activity.
 
 ## What changed in v2
 
@@ -205,18 +205,18 @@ zxt spotlight reindex
 - Siri is optional instead of always being disabled.
 - Apple Intelligence is optional instead of always being disabled.
 - Spotlight is a separate explicit choice.
-- `zxt apply --dry-run` previews changes.
-- `zxt doctor` checks the installation.
-- `zxt configure` provides a repeatable setup wizard.
-- `zxt` with no arguments now shows status instead of immediately making changes.
-- Restore state only records launchd targets that ZXT actually changed.
+- `debloat apply --dry-run` previews changes.
+- `debloat doctor` checks the installation.
+- `debloat configure` provides a repeatable setup wizard.
+- `debloat` with no arguments now shows status instead of immediately making changes.
+- Restore state only records launchd targets that macOS Debloat actually changed.
 - Updating preserves your config and state.
-- The user-level login reapply job remains limited to ZXT-selected user launchd targets.
-- A dedicated uninstaller restores ZXT-managed changes before removing ZXT.
+- The user-level login reapply job remains limited to selected user launchd targets.
+- A dedicated uninstaller restores managed changes before removing macOS Debloat.
 
 ## Safety model
 
-ZXT intentionally does **not** target core services such as `launchd`, `WindowServer`, `tccd`, `securityd`, `powerd`, `runningboardd`, `dasd`, `mds`, `mdworker`, or CoreSpotlight infrastructure.
+macOS Debloat intentionally does **not** target core services such as `launchd`, `WindowServer`, `tccd`, `securityd`, `powerd`, `runningboardd`, `dasd`, `mds`, `mdworker`, or CoreSpotlight infrastructure.
 
 The installer does not keep a root background helper installed. System launchd disable overrides are applied directly and persist through launchd's override state.
 
@@ -227,15 +227,15 @@ The Aggressive profile is for personal Macs where you understand the feature tra
 Before applying a profile:
 
 ```bash
-zxt apply --dry-run
+debloat apply --dry-run
 ```
 
 ## Restore
 
-To restore launchd changes recorded by ZXT and restore Spotlight if ZXT was the tool that disabled it:
+To restore launchd changes recorded by macOS Debloat and restore Spotlight if macOS Debloat was the tool that disabled it:
 
 ```bash
-zxt restore
+debloat restore
 ```
 
 Restart macOS afterward so restored services can return normally.
@@ -243,16 +243,16 @@ Restart macOS afterward so restored services can return normally.
 ## Uninstall
 
 ```bash
-bash <(curl -fsSL https://zxt.lol/debloat/uninstall.sh)
+bash <(curl -fsSL -H "Accept: application/vnd.github.raw+json" "https://api.github.com/repositories/1356850441/contents/uninstall.sh?ref=main")
 ```
 
-The uninstaller first calls `zxt restore`, removes ZXT's user LaunchAgent, any legacy ZXT system LaunchDaemon, and the command symlink, then removes `~/.zxt-macos-debloat`.
+The uninstaller first calls `debloat restore`, removes macOS Debloat's user LaunchAgent, any legacy macOS Debloat system LaunchDaemon, and the command symlink, then removes `~/.macos-debloat`.
 
 ## Files
 
 ```text
-~/.zxt-macos-debloat/
-├── zxt
+~/.macos-debloat/
+├── debloat
 ├── config.json
 ├── presets/
 │   ├── balanced.txt
@@ -262,18 +262,18 @@ The uninstaller first calls `zxt restore`, removes ZXT's user LaunchAgent, any l
 └── state/
 ```
 
-ZXT installs the command at:
+macOS Debloat installs the command at:
 
 ```text
-/usr/local/bin/zxt
+/usr/local/bin/debloat
 ```
 
 ## Troubleshooting
 
-### `zxt: command not found`
+### `debloat: command not found`
 
 ```bash
-ls -l /usr/local/bin/zxt
+ls -l /usr/local/bin/debloat
 ```
 
 If the link is missing, run the installer again.
@@ -283,16 +283,16 @@ If the link is missing, run the installer again.
 First switch back to the Balanced profile and keep optional features enabled:
 
 ```bash
-zxt profile balanced
-zxt siri keep
-zxt intelligence keep
-zxt spotlight keep
+debloat profile balanced
+debloat siri keep
+debloat intelligence keep
+debloat spotlight keep
 ```
 
-If needed, restore all ZXT-managed changes:
+If needed, restore all managed changes:
 
 ```bash
-zxt restore
+debloat restore
 ```
 
 ### Spotlight search is incomplete
@@ -300,13 +300,13 @@ zxt restore
 Enable indexing:
 
 ```bash
-zxt spotlight on
+debloat spotlight on
 ```
 
 If Spotlight itself is behaving incorrectly:
 
 ```bash
-zxt spotlight reindex
+debloat spotlight reindex
 ```
 
 Reindexing can temporarily increase CPU and disk activity.
@@ -319,7 +319,7 @@ See [SECURITY.md](SECURITY.md) for security notes and reporting guidance.
 
 This project was inspired by and originally based on work from [OleksandrKrupko/mac-os-debloat](https://github.com/OleksandrKrupko/mac-os-debloat).
 
-Maintained as ZXT macOS Debloat by [zvzt](https://github.com/zvzt).
+Maintained by [Zot](https://github.com/zvzt).
 
 ## License
 

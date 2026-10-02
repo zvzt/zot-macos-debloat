@@ -48,7 +48,7 @@ DAEMON_DIRS = (
 )
 
 BANNER = r"""
-ZXT macOS Debloat
+macOS Debloat
 =================
 """
 
@@ -325,7 +325,7 @@ def spotlight_is_enabled() -> Optional[bool]:
 
 def apply_spotlight(config: dict[str, str], *, quiet: bool = False) -> None:
     STATE_DIR.mkdir(parents=True, exist_ok=True)
-    changed_by_zxt = SPOTLIGHT_STATE_FILE.exists()
+    changed_by_tool = SPOTLIGHT_STATE_FILE.exists()
     if config["spotlight"] == "off":
         enabled = spotlight_is_enabled()
         if enabled is True:
@@ -335,8 +335,8 @@ def apply_spotlight(config: dict[str, str], *, quiet: bool = False) -> None:
                 if not quiet:
                     print("Spotlight indexing disabled on the startup volume.")
         elif enabled is False and not quiet:
-            print("Spotlight indexing was already disabled; ZXT left that state alone.")
-    elif changed_by_zxt:
+            print("Spotlight indexing was already disabled; The tool left that state alone.")
+    elif changed_by_tool:
         result = privileged(["mdutil", "-i", "on", "/"], quiet=quiet)
         if result.returncode == 0:
             try:
@@ -344,7 +344,7 @@ def apply_spotlight(config: dict[str, str], *, quiet: bool = False) -> None:
             except OSError:
                 pass
             if not quiet:
-                print("Spotlight indexing restored because ZXT had disabled it.")
+                print("Spotlight indexing restored because this tool had disabled it.")
 
 
 def apply(*, quiet: bool = False, dry_run: bool = False) -> None:
@@ -428,10 +428,10 @@ def apply(*, quiet: bool = False, dry_run: bool = False) -> None:
     print(f"Previously managed targets:   {already_managed}")
     print(f"Already disabled by user/app: {preserved_external}")
     print(f"Not present on this macOS:    {len(unavailable)}")
-    print(f"Recorded ZXT targets:         {len(managed)}")
+    print(f"Recorded targets:         {len(managed)}")
     print()
-    print("ZXT records only launchd targets it actually changed, so restore avoids")
-    print("re-enabling services that were already disabled before ZXT touched them.")
+    print("This tool records only launchd targets it actually changed, so restore avoids")
+    print("re-enabling services that were already disabled before macOS Debloat touched them.")
     print()
     print("Restart macOS once after the first install or major profile change.")
 
@@ -451,10 +451,10 @@ def reapply(kind: str) -> None:
 def restore() -> None:
     state = read_state()
     if not state and not SPOTLIGHT_STATE_FILE.exists():
-        print("No ZXT-managed changes are recorded.")
+        print("No managed changes are recorded.")
         return
     if state:
-        print(f"Restoring {len(state)} ZXT-managed launchd targets...")
+        print(f"Restoring {len(state)} managed launchd targets...")
         for entry in sorted(state):
             restore_entry(entry)
         save_state(set())
@@ -466,7 +466,7 @@ def restore() -> None:
             except OSError:
                 pass
             print("Spotlight indexing restored.")
-    print("ZXT-managed changes were restored.")
+    print("managed changes were restored.")
     print("Restart macOS to allow services to return normally.")
 
 
@@ -492,7 +492,7 @@ def status() -> None:
     print(f"Present on this Mac:     {present}")
     print(f"User-domain disabled:    {user_disabled}")
     print(f"System-domain disabled:  {system_disabled}")
-    print(f"Recorded ZXT targets:    {len(read_state())}")
+    print(f"Recorded targets:    {len(read_state())}")
     print()
     print("Spotlight:")
     print("  " + spotlight_status_text().replace("\n", "\n  "))
@@ -523,7 +523,7 @@ def list_services() -> None:
 def doctor() -> None:
     print(BANNER)
     print("System check")
-    print(f"  ZXT version: {VERSION}")
+    print(f"  Version: {VERSION}")
     print(f"  Python:      {platform.python_version()}")
     sw = capture(["sw_vers", "-productVersion"])
     print(f"  macOS:       {(sw.stdout or 'unknown').strip()}")
@@ -594,7 +594,7 @@ def spotlight_command(action: str) -> None:
         print("Rebuilding the Spotlight index can temporarily increase CPU and disk activity.")
         privileged(["mdutil", "-E", "/"], quiet=False)
         return
-    print("Usage: zxt spotlight [status|keep|on|off|optimize|reindex]")
+    print("Usage: debloat spotlight [status|keep|on|off|optimize|reindex]")
     sys.exit(2)
 
 
@@ -697,9 +697,9 @@ def clean_command(key: str) -> Optional[list[str]]:
 
 def clean_usage() -> None:
     print("Usage:")
-    print("  zxt clean")
-    print("  zxt clean --dry-run")
-    print("  zxt clean [categories] [--yes]")
+    print("  debloat clean")
+    print("  debloat clean --dry-run")
+    print("  debloat clean [categories] [--yes]")
     print()
     print("Categories:")
     print("  --caches     User app caches")
@@ -714,7 +714,7 @@ def clean_usage() -> None:
     print("  --quicklook  Quick Look thumbnail/preview cache")
     print("  --all        Select every available category")
     print()
-    print("Without category flags, ZXT asks about each available category.")
+    print("Without category flags, the tool asks about each available category.")
     print("--yes skips only the final confirmation and requires explicit category flags.")
 
 
@@ -763,7 +763,7 @@ def clean(args: list[str]) -> None:
         print(BANNER)
         print("Mass cleaner")
         print("Nothing is selected by default. Each cleanup category is optional.")
-        print("ZXT does not target Documents, Downloads, backups, app preferences, or system files.")
+        print("This tool does not target Documents, Downloads, backups, app preferences, or system files.")
         print()
         for key, (label, path, description) in CLEAN_PATH_TARGETS.items():
             if not path.exists():
@@ -852,21 +852,21 @@ def clean(args: list[str]) -> None:
 
 
 def usage() -> None:
-    print(f"ZXT macOS Debloat {VERSION}")
+    print(f"macOS Debloat {VERSION}")
     print("Usage:")
-    print("  zxt configure")
-    print("  zxt clean [--dry-run]")
-    print("  zxt apply [--dry-run]")
-    print("  zxt status")
-    print("  zxt list")
-    print("  zxt doctor")
-    print("  zxt restore")
-    print("  zxt profile [balanced|aggressive]")
-    print("  zxt siri [keep|disable]")
-    print("  zxt intelligence [keep|disable]")
-    print("  zxt spotlight [status|keep|on|off|optimize|reindex]")
-    print("  zxt config")
-    print("  zxt version")
+    print("  debloat configure")
+    print("  debloat clean [--dry-run]")
+    print("  debloat apply [--dry-run]")
+    print("  debloat status")
+    print("  debloat list")
+    print("  debloat doctor")
+    print("  debloat restore")
+    print("  debloat profile [balanced|aggressive]")
+    print("  debloat siri [keep|disable]")
+    print("  debloat intelligence [keep|disable]")
+    print("  debloat spotlight [status|keep|on|off|optimize|reindex]")
+    print("  debloat config")
+    print("  debloat version")
 
 
 def main() -> None:
