@@ -10,16 +10,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Check Python syntax
-        run: python3 -m py_compile zxt
+        run: python3 -m py_compile debloat
       - name: Check shell syntax
         run: |
           bash -n install.sh
           bash -n uninstall.sh
       - name: Run unit checks
-        run: python3 tests/test_zxt.py -v
+        run: python3 tests/test_debloat.py -v
       - name: Check CLI basics
         run: |
-          chmod +x zxt
-          ./zxt version
-          ./zxt help
-          ./zxt apply --dry-run
+          chmod +x debloat
+          ./debloat version
+          ./debloat help
+          ./debloat apply --dry-run
