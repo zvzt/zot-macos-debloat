@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-REPO="https://raw.githubusercontent.com/zvzt/macos-debloat/main"
+REPO="https://api.github.com/repositories/1356850441/contents"
 INSTALL="$HOME/.macos-debloat"
 PRESETS="$INSTALL/presets"
 STATE="$INSTALL/state"
@@ -33,7 +33,7 @@ mkdir -p "$PRESETS" "$STATE" "$HOME/Library/LaunchAgents"
 echo "Downloading the latest macOS Debloat files..."
 for file in debloat presets/balanced.txt presets/aggressive.txt presets/siri.txt presets/apple-intelligence.txt; do
     mkdir -p "$TMP/$(dirname "$file")"
-    curl -fsSL "$REPO/$file?$(date +%s)" -o "$TMP/$file"
+    curl -fsSL -H "Accept: application/vnd.github.raw+json" "$REPO/$file?ref=main&cache=$(date +%s)" -o "$TMP/$file"
 done
 
 python3 -m py_compile "$TMP/debloat"
