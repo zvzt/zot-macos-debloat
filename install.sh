@@ -2,118 +2,68 @@
 set -euo pipefail
 
 REPO="https://api.github.com/repositories/1356850441/contents"
-INSTALL="$HOME/.macos-debloat"
+INSTALL="$HOME/.zot"
 PRESETS="$INSTALL/presets"
+LIB="$INSTALL/lib"
 STATE="$INSTALL/state"
-CONFIG="$INSTALL/config.json"
-USER_AGENT="$HOME/Library/LaunchAgents/com.zot.macos-debloat.plist"
-SYSTEM_DAEMON="/Library/LaunchDaemons/com.zot.macos-debloat.system.plist"
+OLD_INSTALL="$HOME/.macos-debloat"
+OLD_AGENT="$HOME/Library/LaunchAgents/com.zot.macos-debloat.plist"
 TMP="$(mktemp -d)"
-UID_NUM="$(id -u)"
+trap 'rm -rf "$TMP"' EXIT
 
-cleanup() { rm -rf "$TMP"; }
-trap cleanup EXIT
+printf '\nZot\n===\n\n'
+[ "$(uname -s)" = Darwin ] || { echo "Zot only supports macOS."; exit 1; }
 
-printf '\nmacOS Debloat\n==================\n\n'
+mkdir -p "$PRESETS" "$LIB" "$STATE" "$TMP/lib" "$TMP/presets"
 
-if [ "$(uname -s)" != "Darwin" ]; then
-    echo "macOS Debloat only supports macOS."
-    exit 1
-fi
+fetch(){
+  local path="$1"
+  mkdir -p "$TMP/$(dirname "$path")"
+  curl -fsSL -H 'Accept: application/vnd.github.raw+json' "$REPO/$path?ref=main&cache=$(date +%s)" -o "$TMP/$path"
+}
 
-if ! command -v python3 >/dev/null 2>&1; then
-    echo "Python 3 is required."
-    echo "Install Python 3 first, then run this installer again."
-    echo "Homebrew users can run: brew install python"
-    exit 1
-fi
-
-mkdir -p "$PRESETS" "$STATE" "$HOME/Library/LaunchAgents"
-
-echo "Downloading the latest macOS Debloat files..."
-for file in debloat presets/balanced.txt presets/aggressive.txt presets/siri.txt presets/apple-intelligence.txt; do
-    mkdir -p "$TMP/$(dirname "$file")"
-    curl -fsSL -H "Accept: application/vnd.github.raw+json" "$REPO/$file?ref=main&cache=$(date +%s)" -o "$TMP/$file"
+echo "Downloading Zot..."
+for file in zot lib/common.sh lib/clean.sh lib/analyze.sh lib/system.sh lib/hub.sh presets/balanced.txt presets/aggressive.txt presets/siri.txt presets/apple-intelligence.txt; do
+  fetch "$file"
 done
 
-python3 -m py_compile "$TMP/debloat"
-chmod +x "$TMP/debloat"
+bash -n "$TMP/zot" "$TMP"/lib/*.sh
+chmod +x "$TMP/zot"
 
-
-cp "$TMP/debloat" "$INSTALL/debloat"
-cp "$TMP/presets/balanced.txt" "$PRESETS/balanced.txt"
-cp "$TMP/presets/aggressive.txt" "$PRESETS/aggressive.txt"
-cp "$TMP/presets/siri.txt" "$PRESETS/siri.txt"
-cp "$TMP/presets/apple-intelligence.txt" "$PRESETS/apple-intelligence.txt"
-chmod +x "$INSTALL/debloat"
-
-sudo mkdir -p /usr/local/bin
-sudo ln -sf "$INSTALL/debloat" /usr/local/bin/debloat
-
-if [ ! -f "$CONFIG" ]; then
-    echo
-    echo "First-time setup:"
-    if [ -t 0 ]; then
-        "$INSTALL/debloat" configure --no-apply
-    else
-        echo "No interactive terminal detected; using safe defaults."
-        "$INSTALL/debloat" configure --defaults --no-apply
-    fi
-else
-    echo "Existing configuration preserved."
-    "$INSTALL/debloat" config
+if [ -d "$OLD_INSTALL" ]; then
+  echo "Migrating previous configuration..."
+  [ -f "$OLD_INSTALL/state/disabled-services.txt" ] && cp "$OLD_INSTALL/state/disabled-services.txt" "$STATE/disabled-services.txt" || true
+  [ -f "$OLD_INSTALL/state/spotlight-changed.txt" ] && cp "$OLD_INSTALL/state/spotlight-changed.txt" "$STATE/spotlight-changed.txt" || true
+  if [ -f "$OLD_INSTALL/config.json" ] && [ ! -f "$INSTALL/config" ]; then
+    profile="$(grep -E '"profile"' "$OLD_INSTALL/config.json" | head -1 | sed -E 's/.*: *"([^"]+)".*/\1/' || true)"
+    siri="$(grep -E '"siri"' "$OLD_INSTALL/config.json" | head -1 | sed -E 's/.*: *"([^"]+)".*/\1/' || true)"
+    intelligence="$(grep -E '"intelligence"' "$OLD_INSTALL/config.json" | head -1 | sed -E 's/.*: *"([^"]+)".*/\1/' || true)"
+    spotlight="$(grep -E '"spotlight"' "$OLD_INSTALL/config.json" | head -1 | sed -E 's/.*: *"([^"]+)".*/\1/' || true)"
+    cat > "$INSTALL/config" <<EOF
+profile=${profile:-balanced}
+siri=${siri:-keep}
+intelligence=${intelligence:-keep}
+spotlight=${spotlight:-keep}
+EOF
+  fi
 fi
 
-echo
-printf 'Administrator access may be requested for system launchd targets.\n'
-sudo -v
+cp "$TMP/zot" "$INSTALL/zot"
+cp "$TMP"/lib/*.sh "$LIB/"
+cp "$TMP"/presets/*.txt "$PRESETS/"
+chmod +x "$INSTALL/zot"
 
-"$INSTALL/debloat" apply
+if [ -d /usr/local/bin ] && [ -w /usr/local/bin ]; then
+  ln -sf "$INSTALL/zot" /usr/local/bin/zot
+else
+  sudo mkdir -p /usr/local/bin
+  sudo ln -sf "$INSTALL/zot" /usr/local/bin/zot
+fi
 
-launchctl bootout "gui/$UID_NUM/com.zot.macos-debloat" >/dev/null 2>&1 || true
-rm -f "$USER_AGENT"
-# Older releases installed a root LaunchDaemon that executed the user-owned
-# macOS Debloat script. Remove it during every install/update; launchctl disable overrides
-# persist without that background helper.
-sudo launchctl bootout system/com.zot.macos-debloat.system >/dev/null 2>&1 || true
-sudo rm -f "$SYSTEM_DAEMON"
+# Remove the previous tool-owned helper. Zot no longer installs a background job.
+launchctl bootout "gui/$(id -u)/com.zot.macos-debloat" >/dev/null 2>&1 || true
+rm -f "$OLD_AGENT"
+if [ -e /usr/local/bin/debloat ] || [ -L /usr/local/bin/debloat ]; then sudo rm -f /usr/local/bin/debloat; fi
+if [ -d "$OLD_INSTALL" ]; then rm -rf "$OLD_INSTALL"; fi
 
-cat > "$USER_AGENT" <<EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>com.zot.macos-debloat</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>$INSTALL/debloat</string>
-        <string>reapply-user</string>
-        <string>--quiet</string>
-    </array>
-    <key>RunAtLoad</key>
-    <true/>
-</dict>
-</plist>
-EOF
-
-launchctl bootstrap "gui/$UID_NUM" "$USER_AGENT" >/dev/null 2>&1 || true
-
-printf '\n========================================\n'
-printf 'macOS Debloat installation/update complete.\n'
-printf '========================================\n\n'
-printf 'Common commands:\n'
-printf '  debloat status                 Show current state\n'
-printf '  debloat configure              Change profile/Siri/AI/Spotlight choices\n'
-printf '  debloat clean                  Interactive cache/log/tool cleanup\n'
-printf '  debloat apply --dry-run        Preview changes without applying them\n'
-printf '  debloat apply                  Apply the saved configuration\n'
-printf '  debloat doctor                 Check installation and macOS support\n'
-printf '  debloat restore                Restore changes made by macOS Debloat\n'
-printf '\nFeature shortcuts:\n'
-printf '  debloat siri keep|disable\n'
-printf '  debloat intelligence keep|disable\n'
-printf '  debloat spotlight status|keep|off|on|reindex\n'
-printf '\nRun debloat help for the full command list.\n'
-printf 'System launchd disable overrides persist without a root background helper.\n'
-printf 'Restart macOS once after first install or a major profile change.\n\n'
+printf '\nZot installed.\n\nRun:\n  zot\n\nNo extra runtime, Python package, or background service was installed.\n'
