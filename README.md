@@ -82,16 +82,13 @@ Delete cache files older than:
 
 ### Browser Caches
 
-Supported cache detection includes:
+Automatic cache cleanup is limited to the selected browser family:
 
-- Safari
+- Zen
 - Firefox
-- Google Chrome
-- Brave
-- Microsoft Edge
-- Arc
+- LibreWolf
 
-Running browsers are skipped instead of force-killed.
+Tor Browser remains available in the Install section, but Zot does not automatically delete its profile data because Tor keeps sensitive browser state alongside its profile. Running browsers are skipped instead of force-killed.
 
 ### Developer Cleanup
 
