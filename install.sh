@@ -148,22 +148,30 @@ done
 bash -n "$TMP/zot" "$TMP"/lib/*.sh
 chmod +x "$TMP/zot"
 
+ask_yes_no(){
+  local prompt="$1" answer
+  while :; do
+    printf '%s [Y/N]: ' "$prompt"
+    IFS= read -r answer
+    case "$answer" in
+      y|Y|yes|YES) return 0;;
+      n|N|no|NO) return 1;;
+      *) echo "Please type Y or N.";;
+    esac
+  done
+}
+
 if [ "$FIRST_INSTALL" -eq 1 ]; then
   LEGACY_LIST="$(legacy_artifacts || true)"
   if [ -n "$LEGACY_LIST" ]; then
     printf '\nPrevious Zot/ZXT/debloat files were detected:\n'
     printf '%s\n' "$LEGACY_LIST" | sed 's/^/  - /'
     printf '\nThis can also restore old service/Spotlight changes and remove old auto-run/login/background jobs.\n'
-    printf 'Would you like to delete all previous-version data and disable/remove its old background/login items? [y/N]: '
-    IFS= read -r answer
-    case "$answer" in
-      y|Y|yes|YES)
-        cleanup_previous_versions
-        ;;
-      *)
-        echo "Previous-version files and jobs were left untouched."
-        ;;
-    esac
+    if ask_yes_no "Delete all previous-version data and disable/remove its old background/login items?"; then
+      cleanup_previous_versions
+    else
+      echo "Previous-version files and jobs were left untouched."
+    fi
   fi
 fi
 
@@ -174,11 +182,17 @@ cp "$TMP"/lib/*.sh "$LIB/"
 cp "$TMP"/presets/*.txt "$PRESETS/"
 chmod +x "$INSTALL/zot"
 
+ALIASES=(
+  zot zot-status zot-performance zot-scan zot-clean zot-analyze zot-apps
+  zot-startup zot-optimize zot-install zot-services zot-theme zot-gui
+  zot-doctor zot-history zot-restore zot-update
+)
+
 if [ -d /usr/local/bin ] && [ -w /usr/local/bin ]; then
-  ln -sf "$INSTALL/zot" /usr/local/bin/zot
+  for name in "${ALIASES[@]}"; do ln -sf "$INSTALL/zot" "/usr/local/bin/$name"; done
 else
   sudo mkdir -p /usr/local/bin
-  sudo ln -sf "$INSTALL/zot" /usr/local/bin/zot
+  for name in "${ALIASES[@]}"; do sudo ln -sf "$INSTALL/zot" "/usr/local/bin/$name"; done
 fi
 
-printf '\nZot installed.\n\nRun:\n  zot\n\nNo extra runtime, Python package, auto-login item, or background service was installed.\n'
+printf '\nZot installed.\n\nRun:\n  zot\n\nQuick commands:\n  zot-status\n  zot-performance\n  zot-clean\n  zot-optimize\n  zot-install\n  zot-gui\n\nNo extra runtime, Python package, auto-login item, or background service was installed.\n'
