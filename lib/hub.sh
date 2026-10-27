@@ -346,6 +346,7 @@ hub(){
       "Services & Features — profile, Siri, AI, Spotlight" \
       "Appearance — customize Zot terminal colors" \
       "Tools — doctor, history, popup hub, update" \
+      "Full Maintenance — updates, clean, optimize, refresh, restart" \
       "Quit — close Zot"
     MENU_SUBTITLE=""
     case "$MENU_RESULT" in
@@ -362,6 +363,7 @@ hub(){
       10) services_screen;;
       11) theme_menu;;
       12) tools_menu;;
+      13) full_maintenance;;
       *) clear; return;;
     esac
   done
@@ -376,7 +378,7 @@ Commands:
   zot status                  current Zot/macOS configuration overview
   zot performance             live CPU, RAM, swap, and process dashboard
   zot scan                    read-only cleanup/storage scan
-  zot clean                   cache and rebuildable-file cleanup hub
+  zot clean                   cache and rebuildable-file cleanup hub\n  zot full                    update, clean, optimize, refresh and optionally reboot\n  zot full --dry-run          preview full maintenance without changes
   zot analyze                 large-file, installer, and backup analyzer
   zot apps                    app uninstaller and leftover reviewer
   zot startup                 inspect existing login/background items
@@ -454,6 +456,7 @@ main(){
     performance) status_screen;;
     scan) scan_screen;;
     clean) clean_menu;;
+    full) if [ "${2:-}" = "--dry-run" ]; then full_maintenance dry-run; else full_maintenance; fi;;
     analyze) analyze_menu;;
     apps) apps_screen;;
     startup) startup_screen;;
