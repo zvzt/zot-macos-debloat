@@ -61,14 +61,13 @@ PLAN
   else
     echo "Mole unavailable. Install with: brew install mole"
   fi
-  if confirm "Also run Zot user-cache/log/Trash cleanup?"; then
+  if confirm "Also run Zot user-cache/log/Trash cleanup (may duplicate Mole)?"; then
     # Zot's existing cleaner reviews locations and confirms deletion.
     clean_basic quick
   fi
 
   full_step "Refresh networking and user interface"
   if have dscacheutil; then full_run dscacheutil -flushcache || failures=$((failures+1)); fi
-  if have mDNSResponder; then :; fi
   sudo killall -HUP mDNSResponder 2>/dev/null || true
   if have qlmanage; then qlmanage -r cache >/dev/null 2>&1 || true; fi
   for service in Dock Finder SystemUIServer; do
@@ -82,7 +81,18 @@ PLAN
   full_step "Final session refresh"
   echo "Quitting apps can cause unsaved work to be lost. Save everything first."
   if confirm "Ask open GUI apps to quit gracefully?"; then
-    osascript -e 'tell application "System Events" to set quitApps to name of every application process whose background only is false' -e 'repeat with appName in quitApps' -e 'if appName is not "Finder" then try' -e 'tell application (appName as text) to quit' -e 'end try' -e 'end if' -e 'end repeat' 2>/dev/null || true
+    osascript <<'APPLESCRIPT' 2>/dev/null || true
+tell application "System Events"
+  set quitApps to name of every application process whose background only is false
+end tell
+repeat with appName in quitApps
+  if (appName as text) is not "Finder" and (appName as text) is not "Terminal" and (appName as text) is not "iTerm2" then
+    try
+      tell application (appName as text) to quit
+    end try
+  end if
+end repeat
+APPLESCRIPT
   fi
   record full-maintenance "finished; failures=$failures" 0
   echo "Maintenance completed with $failures reported step failures."
