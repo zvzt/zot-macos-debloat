@@ -141,7 +141,7 @@ cleanup_previous_versions(){
 }
 
 echo "Downloading Zot..."
-for file in zot lib/common.sh lib/clean.sh lib/analyze.sh lib/system.sh lib/login.sh lib/hub.sh presets/balanced.txt presets/aggressive.txt presets/siri.txt presets/apple-intelligence.txt; do
+for file in zot lib/common.sh lib/clean.sh lib/analyze.sh lib/system.sh lib/login.sh lib/full.sh lib/hub.sh presets/balanced.txt presets/aggressive.txt presets/siri.txt presets/apple-intelligence.txt; do
   fetch "$file"
 done
 
