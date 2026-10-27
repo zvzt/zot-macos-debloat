@@ -183,7 +183,7 @@ cp "$TMP"/presets/*.txt "$PRESETS/"
 chmod +x "$INSTALL/zot"
 
 ALIASES=(
-  zot zot-status zot-performance zot-scan zot-clean zot-analyze zot-apps
+  zot cleanup zot-status zot-performance zot-scan zot-clean zot-analyze zot-apps
   zot-startup zot-login zot-optimize zot-install zot-services zot-theme zot-gui
   zot-doctor zot-history zot-restore zot-update
 )
