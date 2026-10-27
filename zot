@@ -1,7 +1,7 @@
 #!/bin/bash
 set -u
 
-VERSION="3.3.0"
+VERSION="3.2.0"
 HOME_DIR="$HOME"
 BASE_DIR="${ZOT_HOME:-$HOME/.zot}"
 PRESETS_DIR="$BASE_DIR/presets"
@@ -25,13 +25,9 @@ GRAY="${ESC}[38;5;245m"
 
 mkdir -p "$STATE_DIR" 2>/dev/null || true
 
-for module in common clean analyze system login full hub; do
+for module in common clean analyze system login hub; do
   file="$BASE_DIR/lib/$module.sh"
   [ -f "$file" ] || { echo "Zot install is incomplete: missing $file" >&2; exit 1; }
   . "$file"
 done
-if [ "$(basename "$0")" = "cleanup" ]; then
-  main full "$@"
-else
-  main "$@"
-fi
+main "$@"
