@@ -456,7 +456,7 @@ main(){
     performance) status_screen;;
     scan) scan_screen;;
     clean) clean_menu;;
-    full) if [ "${2:-}" = "--dry-run" ]; then full_maintenance dry-run; else full_maintenance; fi;;
+    full|cleanup) if [ "${2:-}" = "--dry-run" ]; then full_maintenance dry-run; else full_maintenance; fi;;
     analyze) analyze_menu;;
     apps) apps_screen;;
     startup) startup_screen;;
