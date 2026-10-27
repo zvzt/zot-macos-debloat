@@ -30,4 +30,8 @@ for module in common clean analyze system login full hub; do
   [ -f "$file" ] || { echo "Zot install is incomplete: missing $file" >&2; exit 1; }
   . "$file"
 done
-main "$@"
+if [ "$(basename "$0")" = "cleanup" ]; then
+  main full "$@"
+else
+  main "$@"
+fi
