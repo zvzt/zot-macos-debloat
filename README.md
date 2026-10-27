@@ -57,7 +57,7 @@ Main sections:
 - **Services & Features** — Balanced/Aggressive service profiles plus optional Siri, Apple Intelligence, and Spotlight controls.
 - **Tools** — System Doctor, operation history, updater, Activity Monitor, and Storage Settings.
 
-## Cleaning
+## Full Maintenance (Zot 3.3.0)\n\nRun `zot full --dry-run` to preview or `zot full` to run the reviewed, step-by-step workflow. It updates Homebrew formulae/casks, checks Mac App Store updates with `mas` (when installed), offers macOS system updates, runs Mole `mo clean` and `mo optimize` (when installed), optionally invokes Zot cache/log/Trash cleanup, refreshes DNS, Quick Look, Dock, Finder, SystemUIServer and CoreAudio, then offers graceful app quit and a reboot. Missing optional tools are skipped. App Store/standalone apps not managed by these tools may need manual updates. No background job or unattended reboot is created. Save work first; destructive cleanup and final reboot require confirmations.\n\nOptional dependencies: `brew install mole mas` (install `mas` only when supported).\n\n## Cleaning
 
 Zot distinguishes between rebuildable data and personal files.
 
