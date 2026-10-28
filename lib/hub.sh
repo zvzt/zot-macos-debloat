@@ -194,6 +194,25 @@ doctor_screen(){
   printf '  %-24s %s\n' 'Memory free' "${pressure:-unknown}%"
   printf '  %-24s %s\n' 'Spotlight' "$(mdutil -s / 2>/dev/null | tail -1 | xargs)"
   printf '  %-24s %s\n' 'Homebrew' "$(have brew && brew --version | head -1 || echo 'not installed')"
+  local sip vault firewall gatekeeper seal backup
+  sip="$(csrutil status 2>/dev/null | sed -n '1p' || true)"
+  vault="$(fdesetup status 2>/dev/null | sed -n '1p' || true)"
+  firewall="$(/usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate 2>/dev/null | sed -n '1p' || true)"
+  gatekeeper="$(spctl --status 2>/dev/null | sed -n '1p' || true)"
+  seal="$(diskutil info / 2>/dev/null | awk '/^[[:space:]]*Sealed:/{print $2; exit}' || true)"
+  backup="$(tmutil destinationinfo 2>&1 || true)"
+  case "$backup" in
+    *'No destinations configured'*|'') backup="No destination configured";;
+    *'Name'*|*'ID'*|*'Kind'*) backup="Configured (backup not verified)";;
+    *) backup="Unable to confirm";;
+  esac
+  printf '\n%bSecurity & backups (read-only)%b\n' "$BOLD" "$RESET"
+  printf '  %-24s %s\n' 'SIP' "${sip:-Unavailable}"
+  printf '  %-24s %s\n' 'FileVault' "${vault:-Unavailable}"
+  printf '  %-24s %s\n' 'Firewall' "${firewall:-Unavailable}"
+  printf '  %-24s %s\n' 'Gatekeeper' "${gatekeeper:-Unavailable}"
+  printf '  %-24s %s\n' 'System snapshot sealed' "${seal:-Unavailable}"
+  printf '  %-24s %s\n' 'Time Machine' "$backup"
   printf '\n%bNotes%b\n' "$BOLD" "$RESET"
   [ "$free" -lt 21474836480 ] && printf '  %b! Less than 20 GB free; low free space can hurt macOS performance.%b\n' "$YELLOW" "$RESET" || printf '  %b✓ Disk free space looks reasonable.%b\n' "$GREEN" "$RESET"
   case "${swap:-0}" in *G) printf '  %b• Swap is in use. Check Performance for sustained high-memory processes.%b\n' "$GRAY" "$RESET";; esac
@@ -222,13 +241,18 @@ status_plain(){
   printf 'Apple Intelligence: %s\n' "$INTELLIGENCE"
   printf 'Spotlight preference: %s\n' "$SPOTLIGHT"
   printf 'Spotlight actual: %s\n' "$spotlight"
-  printf 'Services disabled by Zot: %s\n' "$services"
+  printf 'Saved service disable records: %s (not live status)\n' "$services"
+  printf 'Verify live overrides: zot audit\n'
   printf 'Startup items disabled by Zot: %s\n' "$startup"
   local login_tw="OFF" login_cl="OFF"
   login_tweaks_enabled && login_tw="ON"
   login_clean_enabled && login_cl="ON"
   printf 'Login Tweaks Auto Apply: %s\n' "$login_tw"
   printf 'Login Cleaning Auto Run: %s\n' "$login_cl"
+  if [ "$login_cl" = ON ]; then
+    login_clean_load
+    printf '  Login cleanup items: %s\n' "${LOGIN_CLEAN_ITEMS:-not selected}"
+  fi
   printf 'Persistent background process: none\n'
   printf 'Last optimization: %s\n' "$last_opt"
 }
