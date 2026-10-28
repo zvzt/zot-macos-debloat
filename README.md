@@ -135,7 +135,7 @@ Personal files and backups are moved to Trash only after explicit selection and 
 
 Zot scans `/Applications` and `~/Applications`, shows application sizes, and moves selected apps to Trash.
 
-For leftovers, Zot only proposes exact paths tied to the app name or bundle identifier in known user-library locations. Leftovers are reviewed separately before moving them to Trash.
+When uninstalling an app, Zot scans its verified bundle identifier and app-specific names in selected user Library locations: Application Support (including browser profiles containing **cookies, history, saved sessions and extensions**), Caches, Preferences, Containers, HTTPStorages, WebKit, Cookies, Logs, Saved Application State, Application Scripts, and matching Login Agents. It also checks app-named folders nested under vendor directories such as Google/Chrome. It displays exact matched paths and sizes **before** moving the app and matched data to Trash. Potentially shared data, such as Group Containers and app-extension suffixes, requires an additional explicit confirmation and is never removed by default. Zot avoids broad substring matching and symlinks. **It cannot guarantee removal of all application traces:** system-wide data, Keychain credentials, cloud accounts, other user profiles and remote server data are outside its safe scope. No permanent erasure is performed; empty Trash manually only after reviewing the contents.
 
 ## Startup Manager
 
@@ -239,7 +239,7 @@ The Install section is intentionally small and curated. Every item includes a sh
 - **Node.js** — JavaScript runtime
 - **Xcode** — Apple app development IDE
 
-Select **Apps & Updates → Install Apps**, choose a category, highlight an app and press **Enter**. Zot shows what it will do and asks for confirmation before installing anything. You do **not** need to press Space or select multiple apps. With Homebrew available, supported apps are downloaded and installed using verified cask/formula names; existing installations are marked **installed** and skipped. If an installation fails, Zot displays the error rather than reporting success. Without Homebrew, Zot offers the official download website. Mousecape and Xcode always open their official download/developer pages, which require you to finish installation manually. Zot never silently installs a package manager.
+Select **Apps & Updates → Install Apps**, choose a category, highlight an app and press **Enter**. Zot shows what it will do and asks for confirmation before installing anything. You do **not** need to press Space or select multiple apps. With Homebrew available, supported apps are downloaded and installed using verified cask/formula names; existing installations are marked **installed** and skipped. If an installation fails, Zot displays the error rather than reporting success. If Homebrew is missing, Zot first offers to install it using the **official Homebrew installer**, with explicit confirmation, then continues to install the selected app if setup succeeds. The app menu also provides **Install Homebrew**, and you can run `zot homebrew`. The Homebrew installer can request administrator access and may install Command Line Tools; Zot will show its live output. If you decline Homebrew or installation fails, Zot offers the selected app's official download page instead. Mousecape and Xcode always open their official download/developer pages, which require you to finish installation manually. Homebrew is never installed without approval.
 
 ## Service Profiles
 
