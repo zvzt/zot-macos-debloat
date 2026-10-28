@@ -152,34 +152,52 @@ zot_install_homebrew(){
   return 0
 }
 
-catalog_installed(){
-  local i="$1" pkg typ app brew_bin
-  pkg="${CAT_PKGS[$i]}"; typ="${CAT_TYPES[$i]}"; app="${CAT_APP_NAMES[$i]}"
-  brew_bin="$(zot_brew_path 2>/dev/null || true)"
-  if [ -n "$brew_bin" ] && [ -n "$pkg" ]; then
-    if [ "$typ" = cask ]; then
-      "$brew_bin" list --cask "$pkg" >/dev/null 2>&1 && return 0
-    elif [ "$typ" = formula ]; then
-      "$brew_bin" list --formula "$pkg" >/dev/null 2>&1 && return 0
-    fi
-  fi
-  if [ -n "$app" ]; then
-    [ -d "/Applications/$app.app" ] && return 0
-    [ -d "$HOME/Applications/$app.app" ] && return 0
-  fi
+# A Homebrew cask receipt may remain after the actual .app was deleted.
+catalog_app_present(){
+  local name path
+  name="${CAT_APP_NAMES[$1]}"
+  [ -n "$name" ] || return 1
+  for path in "/Applications/$name.app" "$HOME/Applications/$name.app"; do
+    [ -d "$path" ] && return 0
+  done
   return 1
 }
 
+catalog_install_state(){
+  local i="$1" pkg typ brew_bin
+  pkg="${CAT_PKGS[$i]}"; typ="${CAT_TYPES[$i]}"
+  brew_bin="$(zot_brew_path 2>/dev/null || true)"
+  if [ "$typ" = formula ]; then
+    if [ -n "$brew_bin" ] && "$brew_bin" list --formula "$pkg" >/dev/null 2>&1; then
+      printf 'installed\n'
+    else
+      printf 'missing\n'
+    fi
+    return 0
+  fi
+  if catalog_app_present "$i"; then
+    printf 'installed\n'
+  elif [ "$typ" = cask ] && [ -n "$brew_bin" ] &&
+       "$brew_bin" list --cask "$pkg" >/dev/null 2>&1; then
+    printf 'repair\n'
+  else
+    printf 'missing\n'
+  fi
+}
+
+catalog_installed(){ [ "$(catalog_install_state "$1")" = installed ]; }
+
 install_app(){
-  local i="$1" pkg typ name url brew_bin rc
+  local i="$1" pkg typ name url brew_bin rc state action
   name="${CAT_NAMES[$i]}"; pkg="${CAT_PKGS[$i]}"; typ="${CAT_TYPES[$i]}"
   url="${CAT_URLS[$i]}"
   header
   printf '%b◆ Install %s%b\n\n' "$BOLD$ACCENT" "$name" "$RESET"
   printf '  %s\n\n' "${CAT_DESCS[$i]}"
 
-  if catalog_installed "$i"; then
-    printf '%bAlready installed.%b No changes made.\n\n' "$GREEN" "$RESET"
+  state="$(catalog_install_state "$i")"
+  if [ "$state" = installed ]; then
+    printf '%bThe app is present; already installed.%b No changes made.\n\n' "$GREEN" "$RESET"
     press_enter
     return 0
   fi
@@ -191,27 +209,45 @@ install_app(){
     brew_bin="$(zot_brew_path 2>/dev/null || true)"
   fi
   if [ "$typ" != url ] && [ -n "$pkg" ] && [ -n "$brew_bin" ]; then
+    state="$(catalog_install_state "$i")"
+    action=install
+    if [ "$typ" = cask ] && [ "$state" = repair ]; then action=reinstall; fi
     if [ "$typ" = cask ]; then
-      printf 'Method: Homebrew app installer\nCommand: %s install --cask %s\n\n' "$brew_bin" "$pkg"
+      if [ "$action" = reinstall ]; then
+        printf '%bHomebrew remembers %s, but the actual app is missing.%b\n' "$YELLOW" "$name" "$RESET"
+        printf 'Repair will reinstall the cask without --zap or intentional profile deletion.\n'
+      fi
+      printf 'Command: %s %s --cask %s\n\n' "$brew_bin" "$action" "$pkg"
     else
-      printf 'Method: Homebrew command-line package\nCommand: %s install %s\n\n' "$brew_bin" "$pkg"
+      printf 'Command: %s install %s\n\n' "$brew_bin" "$pkg"
     fi
-    confirm "Download and install $name?" || return 0
+    if [ "$action" = reinstall ]; then
+      confirm "Repair $name with Homebrew reinstall?" || return 0
+    else
+      confirm "Download and install $name?" || return 0
+    fi
     printf '\nInstalling %s... Homebrew output follows.\n\n' "$name"
     rc=0
     if [ "$typ" = cask ]; then
-      "$brew_bin" install --cask "$pkg" || rc=$?
+      "$brew_bin" "$action" --cask "$pkg" || rc=$?
     else
       "$brew_bin" install "$pkg" || rc=$?
     fi
-    record install "$name" "$rc"
+    record "$action" "$name" "$rc"
     if [ "$rc" -ne 0 ]; then
-      printf '\n%bInstall failed (exit code %s).%b Read the Homebrew error above.\n' "$RED" "$rc" "$RESET"
-      printf 'For manual download, visit: %s\n\n' "$url"
+      printf '\n%bHomebrew %s failed (exit code %s).%b Read the error above.\n' "$RED" "$action" "$rc" "$RESET"
+      printf 'Manual download: %s\n\n' "$url"
       press_enter
       return 1
     fi
-    printf '\n%bHomebrew completed successfully: %s%b\n\n' "$GREEN" "$name" "$RESET"
+    if [ "$typ" = cask ] && ! catalog_app_present "$i"; then
+      printf '\n%bHomebrew finished, but the app was not found in /Applications or ~/Applications.%b\n' "$YELLOW" "$RESET"
+      printf 'Check another install location or use: %s\n\n' "$url"
+      record install-unverified "$name" 1
+      press_enter
+      return 1
+    fi
+    printf '\n%bInstalled successfully: %s%b\n\n' "$GREEN" "$name" "$RESET"
     press_enter
     return 0
   fi
@@ -244,13 +280,15 @@ install_group(){
     labels=(); map=()
     for ((i=0;i<${#CAT_NAMES[@]};i++)); do
       [ "${CAT_GROUPS[$i]}" = "$group" ] || continue
-      if catalog_installed "$i"; then
-        labels+=("${CAT_NAMES[$i]} — installed")
-      elif [ "${CAT_TYPES[$i]}" = url ]; then
-        labels+=("${CAT_NAMES[$i]} — official website")
-      else
-        labels+=("${CAT_NAMES[$i]} — download & install")
-      fi
+      case "$(catalog_install_state "$i")" in
+        installed) labels+=("${CAT_NAMES[$i]} — installed (app found)");;
+        repair) labels+=("${CAT_NAMES[$i]} — missing app, repair available");;
+        *) if [ "${CAT_TYPES[$i]}" = url ]; then
+             labels+=("${CAT_NAMES[$i]} — official website")
+           else
+             labels+=("${CAT_NAMES[$i]} — download & install")
+           fi;;
+      esac
       map+=("$i")
     done
     labels+=("Back — app categories")
