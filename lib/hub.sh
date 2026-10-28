@@ -613,6 +613,7 @@ Maintenance:
   zot optimize              Selected maintenance tasks
   zot apps                  Uninstall and review leftovers
   zot install               Curated app installer
+  zot homebrew              Set up Homebrew when missing (with approval)
   zot update                Update Zot
 
 Advanced:
@@ -681,6 +682,7 @@ main(){
     login) login_hub;;
     optimize) optimize_screen;;
     install) install_menu;;
+    homebrew|brew) header; zot_install_homebrew; printf '\n'; press_enter;;
     services) if [ "${1:-}" = audit ] || [ "${1:-}" = status ]; then services_audit; else services_screen; fi;;
     theme|appearance) theme_menu;;
     gui|popup) popup_hub;;
