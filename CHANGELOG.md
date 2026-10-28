@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.4.4
+
+- Fix false installed status for Homebrew casks when an app was manually removed.
+- For GUI apps, verify the actual .app in /Applications or ~/Applications instead of trusting Homebrew metadata alone.
+- Show missing app, repair available for stale cask records.
+- Offer a confirmed brew reinstall --cask repair without --zap, retaining user profiles where possible.
+- Verify the application bundle after Homebrew reports success, and report unverified installs.
+- Add Tor Browser regression coverage for the stale-cask scenario.
+
+
 ## 3.4.3
 
 - **Install apps:** When Homebrew is missing, offer the official Homebrew installer with explicit approval, verify success and continue with the selected app. Keep official-site fallback for declined or failed setup. Added `zot homebrew` and an Install Homebrew menu entry.
