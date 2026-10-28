@@ -70,6 +70,88 @@ zot_brew_path(){
   fi
 }
 
+# Use only Homebrew's official installer, after explicit user approval.
+# Helper functions can be replaced by mocks in the offline installer tests.
+zot_homebrew_can_prompt(){ [ -t 0 ] && [ -t 1 ]; }
+
+zot_homebrew_download(){
+  curl --fail --location --silent --show-error --connect-timeout 15 --max-time 120 \
+    --output "$1" "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
+}
+
+zot_homebrew_run(){ /bin/bash "$1"; }
+
+zot_install_homebrew(){
+  local brew_bin tmp rc=0
+  brew_bin="$(zot_brew_path 2>/dev/null || true)"
+  if [ -n "$brew_bin" ]; then
+    printf 'Homebrew is already installed: %s\n' "$brew_bin"
+    return 0
+  fi
+  if [ "$(uname -s)" != Darwin ]; then
+    printf '%bHomebrew setup here supports macOS only.%b\n' "$RED" "$RESET"
+    return 1
+  fi
+  if ! zot_homebrew_can_prompt; then
+    printf '%bRun Zot in an interactive Terminal to install Homebrew.%b\n' "$YELLOW" "$RESET"
+    return 1
+  fi
+  if ! have curl; then
+    printf '%bcurl is unavailable; Homebrew installation cannot start.%b\n' "$RED" "$RESET"
+    return 1
+  fi
+
+  printf '\n%bHomebrew is not installed.%b\n' "$YELLOW" "$RESET"
+  printf 'Zot can download and run the official Homebrew installation script.\n'
+  printf 'Source: https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh\n'
+  printf 'Homebrew may request your administrator password and install Apple Command Line Tools.\n'
+  printf 'Its installer will also explain its changes and request approval.\n\n'
+  confirm "Install Homebrew now?" || return 1
+
+  tmp="$(mktemp "${TMPDIR:-/tmp}/zot-homebrew.XXXXXX")" || {
+    printf '%bCould not create a temporary installer file.%b\n' "$RED" "$RESET"
+    return 1
+  }
+  chmod 600 "$tmp" || true
+  printf '\nDownloading the official Homebrew installer...\n'
+  if ! zot_homebrew_download "$tmp" || [ ! -s "$tmp" ]; then
+    printf '%bHomebrew installer download failed; nothing was executed.%b\n' "$RED" "$RESET"
+    rm -f "$tmp"
+    record homebrew-install download-failed 1
+    return 1
+  fi
+  if ! head -n 1 "$tmp" | grep -q '^#!/bin/bash'; then
+    printf '%bUnexpected installer contents; refusing to execute.%b\n' "$RED" "$RESET"
+    rm -f "$tmp"
+    record homebrew-install invalid-download 1
+    return 1
+  fi
+
+  printf 'Running the official Homebrew installer...\n\n'
+  zot_homebrew_run "$tmp" || rc=$?
+  rm -f "$tmp"
+  if [ "$rc" -ne 0 ]; then
+    printf '\n%bHomebrew installation failed or was cancelled (exit %s).%b\n' "$RED" "$rc" "$RESET"
+    record homebrew-install failed "$rc"
+    return 1
+  fi
+
+  brew_bin="$(zot_brew_path 2>/dev/null || true)"
+  if [ -z "$brew_bin" ] || ! "$brew_bin" --version >/dev/null 2>&1; then
+    printf '%bHomebrew installation finished but brew could not be verified.%b\n' "$RED" "$RESET"
+    printf 'Follow the Homebrew post-install instructions shown above.\n'
+    record homebrew-install unverified 1
+    return 1
+  fi
+  record homebrew-install verified 0
+  printf '\n%bHomebrew installed and verified: %s%b\n' "$GREEN" "$brew_bin" "$RESET"
+  if ! have brew; then
+    printf 'For future Terminal sessions, follow the Homebrew shell PATH instructions printed above.\n'
+    printf 'Zot can use the installed brew immediately without changing your shell configuration.\n'
+  fi
+  return 0
+}
+
 catalog_installed(){
   local i="$1" pkg typ app brew_bin
   pkg="${CAT_PKGS[$i]}"; typ="${CAT_TYPES[$i]}"; app="${CAT_APP_NAMES[$i]}"
@@ -103,6 +185,11 @@ install_app(){
   fi
 
   brew_bin="$(zot_brew_path 2>/dev/null || true)"
+  if [ "$typ" != url ] && [ -n "$pkg" ] && [ -z "$brew_bin" ]; then
+    # A declined/failed Homebrew setup falls back to the app's official site.
+    zot_install_homebrew || true
+    brew_bin="$(zot_brew_path 2>/dev/null || true)"
+  fi
   if [ "$typ" != url ] && [ -n "$pkg" ] && [ -n "$brew_bin" ]; then
     if [ "$typ" = cask ]; then
       printf 'Method: Homebrew app installer\nCommand: %s install --cask %s\n\n' "$brew_bin" "$pkg"
@@ -132,8 +219,7 @@ install_app(){
   if [ "$typ" = url ]; then
     printf 'This item is downloaded from its official site.\n'
   else
-    printf '%bHomebrew was not found.%b Using the official website instead.\n' "$YELLOW" "$RESET"
-    printf 'To install apps directly later, install Homebrew from https://brew.sh/.\n'
+    printf '%bHomebrew is still unavailable.%b Opening the official app website instead.\n' "$YELLOW" "$RESET"
   fi
   printf 'Official website: %s\n\n' "$url"
   confirm "Open the official download page for $name?" || return 0
@@ -182,11 +268,13 @@ install_menu(){
       "Browsers — Zen, Firefox, LibreWolf, Tor" \
       "Utilities — Raycast, Ice, LuLu, iTerm2, more" \
       "Developer — VS Code, GitHub CLI, Python, Node, Xcode" \
+      "Install Homebrew — set up the package manager" \
       "Back — main menu"
     case "$MENU_RESULT" in
       0) install_group Browsers;;
       1) install_group Utilities;;
       2) install_group Developer;;
+      3) header; zot_install_homebrew || true; printf '\n'; press_enter;;
       *) return;;
     esac
   done
