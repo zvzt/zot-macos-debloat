@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
@@ -26,6 +25,7 @@ press_enter(){ :; }
 confirm(){ return 0; }
 record(){ printf 'record:%s:%s:%s\n' "$1" "$2" "$3" >> "$ZOT_TEST_LOG"; }
 open(){ printf 'open:%s\n' "$1" >> "$ZOT_TEST_LOG"; }
+have(){ command -v "$1" >/dev/null 2>&1; }
 zot_brew_path(){ printf '%s\n' "$TMP/mockbrew"; }
 
 catalog_init
@@ -42,9 +42,8 @@ grep -q '^brew:install --cask librewolf$' "$ZOT_TEST_LOG"
 grep -q '^record:install:LibreWolf:0$' "$ZOT_TEST_LOG"
 
 ZOT_TEST_BREW_RC=17
-export ZOT_TEST_BREW_RC
 if install_app 2 >"$TMP/error.txt"; then
-  echo 'Expected failed Homebrew installation to fail' >&2
+  echo "Expected failed Homebrew installation to fail" >&2
   exit 1
 fi
 grep -q 'Install failed (exit code 17)' "$TMP/error.txt"
@@ -60,8 +59,7 @@ install_app 5 >"$TMP/mousecape.txt"
 grep -q '^open:https://github.com/alexzielenski/Mousecape/releases$' "$ZOT_TEST_LOG"
 grep -q '^record:open-download:Mousecape:0$' "$ZOT_TEST_LOG"
 
-# Missing Homebrew: approved official setup, then selected app installation.
-have(){ command -v "$1" >/dev/null 2>&1; }
+# Missing Homebrew, explicitly approved installer, resume selected app.
 ZOT_TEST_BREW_AVAILABLE=0
 zot_brew_path(){
   [ "$ZOT_TEST_BREW_AVAILABLE" = 1 ] && { printf '%s\n' "$TMP/mockbrew"; return 0; }
@@ -78,59 +76,11 @@ zot_homebrew_run(){
 }
 ZOT_TEST_BREW_RC=0
 install_app 2 >"$TMP/bootstrap.txt"
-grep -q '^download:official-homebrew
-  menu_calls=$((menu_calls+1))
-  if [ "$menu_calls" -eq 1 ]; then MENU_RESULT=1
-  else MENU_RESULT=4
-  fi
-}
-install_app(){ printf 'picked:%s\n' "$1" >> "$ZOT_TEST_LOG"; }
-catalog_installed(){ return 1; }
-install_group Browsers
-grep -q '^picked:1$' "$ZOT_TEST_LOG"
-
-echo "App installer behavior tests passed."
- "$ZOT_TEST_LOG"
-grep -q '^run:official-homebrew
-  menu_calls=$((menu_calls+1))
-  if [ "$menu_calls" -eq 1 ]; then MENU_RESULT=1
-  else MENU_RESULT=4
-  fi
-}
-install_app(){ printf 'picked:%s\n' "$1" >> "$ZOT_TEST_LOG"; }
-catalog_installed(){ return 1; }
-install_group Browsers
-grep -q '^picked:1$' "$ZOT_TEST_LOG"
-
-echo "App installer behavior tests passed."
- "$ZOT_TEST_LOG"
-grep -q '^record:homebrew-install:verified:0
-  menu_calls=$((menu_calls+1))
-  if [ "$menu_calls" -eq 1 ]; then MENU_RESULT=1
-  else MENU_RESULT=4
-  fi
-}
-install_app(){ printf 'picked:%s\n' "$1" >> "$ZOT_TEST_LOG"; }
-catalog_installed(){ return 1; }
-install_group Browsers
-grep -q '^picked:1$' "$ZOT_TEST_LOG"
-
-echo "App installer behavior tests passed."
- "$ZOT_TEST_LOG"
+grep -q '^download:official-homebrew$' "$ZOT_TEST_LOG"
+grep -q '^run:official-homebrew$' "$ZOT_TEST_LOG"
+grep -q '^record:homebrew-install:verified:0$' "$ZOT_TEST_LOG"
 grep -q 'Homebrew installed and verified' "$TMP/bootstrap.txt"
-grep -q '^brew:install --cask librewolf
-  menu_calls=$((menu_calls+1))
-  if [ "$menu_calls" -eq 1 ]; then MENU_RESULT=1
-  else MENU_RESULT=4
-  fi
-}
-install_app(){ printf 'picked:%s\n' "$1" >> "$ZOT_TEST_LOG"; }
-catalog_installed(){ return 1; }
-install_group Browsers
-grep -q '^picked:1$' "$ZOT_TEST_LOG"
-
-echo "App installer behavior tests passed."
- "$ZOT_TEST_LOG"
+grep -q '^brew:install --cask librewolf$' "$ZOT_TEST_LOG"
 
 # Declining setup makes no changes.
 ZOT_TEST_BREW_AVAILABLE=0
@@ -143,37 +93,25 @@ fi
 ! grep -q 'should not download' "$ZOT_TEST_LOG"
 confirm(){ return 0; }
 
-# Failed or empty download is never executed.
+# Empty official installer is never executed.
 zot_homebrew_download(){ : > "$1"; return 0; }
 zot_homebrew_run(){ printf 'should never execute\n' >> "$ZOT_TEST_LOG"; }
 if zot_install_homebrew >"$TMP/failed-download.txt"; then
-  echo "Expected empty installer download to fail" >&2
+  echo "Expected empty download to fail" >&2
   exit 1
 fi
 grep -q 'download failed' "$TMP/failed-download.txt"
 ! grep -q 'should never execute' "$ZOT_TEST_LOG"
 
-# Failed official installer is not marked successful.
+# Failure is not reported as success.
 zot_homebrew_download(){ printf '#!/bin/bash\n' > "$1"; }
 zot_homebrew_run(){ return 12; }
 if zot_install_homebrew >"$TMP/failed-setup.txt"; then
-  echo "Expected Homebrew installer failure to be returned" >&2
+  echo "Expected installer failure to be returned" >&2
   exit 1
 fi
 grep -q 'installation failed or was cancelled (exit 12)' "$TMP/failed-setup.txt"
-grep -q '^record:homebrew-install:failed:12
-  menu_calls=$((menu_calls+1))
-  if [ "$menu_calls" -eq 1 ]; then MENU_RESULT=1
-  else MENU_RESULT=4
-  fi
-}
-install_app(){ printf 'picked:%s\n' "$1" >> "$ZOT_TEST_LOG"; }
-catalog_installed(){ return 1; }
-install_group Browsers
-grep -q '^picked:1$' "$ZOT_TEST_LOG"
-
-echo "App installer behavior tests passed."
- "$ZOT_TEST_LOG"
+grep -q '^record:homebrew-install:failed:12$' "$ZOT_TEST_LOG"
 
 menu_calls=0
 menu(){
