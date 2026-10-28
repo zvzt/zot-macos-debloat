@@ -55,80 +55,134 @@ catalog_init(){
     "https://nodejs.org/en/download"
     "https://developer.apple.com/xcode/"
   )
+  CAT_APP_NAMES=(
+    "Zen" "Firefox" "LibreWolf" "Tor Browser"
+    "iTerm" "Mousecape" "Raycast" "Ice" "LuLu" "BetterDisplay" "OnyX"
+    "Visual Studio Code" "" "" "" "Xcode"
+  )
+}
+
+zot_brew_path(){
+  if have brew; then command -v brew
+  elif [ -x /opt/homebrew/bin/brew ]; then printf '%s\n' /opt/homebrew/bin/brew
+  elif [ -x /usr/local/bin/brew ]; then printf '%s\n' /usr/local/bin/brew
+  else return 1
+  fi
+}
+
+catalog_installed(){
+  local i="$1" pkg typ app brew_bin
+  pkg="${CAT_PKGS[$i]}"; typ="${CAT_TYPES[$i]}"; app="${CAT_APP_NAMES[$i]}"
+  brew_bin="$(zot_brew_path 2>/dev/null || true)"
+  if [ -n "$brew_bin" ] && [ -n "$pkg" ]; then
+    if [ "$typ" = cask ]; then
+      "$brew_bin" list --cask "$pkg" >/dev/null 2>&1 && return 0
+    elif [ "$typ" = formula ]; then
+      "$brew_bin" list --formula "$pkg" >/dev/null 2>&1 && return 0
+    fi
+  fi
+  if [ -n "$app" ]; then
+    [ -d "/Applications/$app.app" ] && return 0
+    [ -d "$HOME/Applications/$app.app" ] && return 0
+  fi
+  return 1
+}
+
+install_app(){
+  local i="$1" pkg typ name url brew_bin rc
+  name="${CAT_NAMES[$i]}"; pkg="${CAT_PKGS[$i]}"; typ="${CAT_TYPES[$i]}"
+  url="${CAT_URLS[$i]}"
+  header
+  printf '%b◆ Install %s%b\n\n' "$BOLD$ACCENT" "$name" "$RESET"
+  printf '  %s\n\n' "${CAT_DESCS[$i]}"
+
+  if catalog_installed "$i"; then
+    printf '%bAlready installed.%b No changes made.\n\n' "$GREEN" "$RESET"
+    press_enter
+    return 0
+  fi
+
+  brew_bin="$(zot_brew_path 2>/dev/null || true)"
+  if [ "$typ" != url ] && [ -n "$pkg" ] && [ -n "$brew_bin" ]; then
+    if [ "$typ" = cask ]; then
+      printf 'Method: Homebrew app installer\nCommand: %s install --cask %s\n\n' "$brew_bin" "$pkg"
+    else
+      printf 'Method: Homebrew command-line package\nCommand: %s install %s\n\n' "$brew_bin" "$pkg"
+    fi
+    confirm "Download and install $name?" || return 0
+    printf '\nInstalling %s... Homebrew output follows.\n\n' "$name"
+    rc=0
+    if [ "$typ" = cask ]; then
+      "$brew_bin" install --cask "$pkg" || rc=$?
+    else
+      "$brew_bin" install "$pkg" || rc=$?
+    fi
+    record install "$name" "$rc"
+    if [ "$rc" -ne 0 ]; then
+      printf '\n%bInstall failed (exit code %s).%b Read the Homebrew error above.\n' "$RED" "$rc" "$RESET"
+      printf 'For manual download, visit: %s\n\n' "$url"
+      press_enter
+      return 1
+    fi
+    printf '\n%bHomebrew completed successfully: %s%b\n\n' "$GREEN" "$name" "$RESET"
+    press_enter
+    return 0
+  fi
+
+  if [ "$typ" = url ]; then
+    printf 'This item is downloaded from its official site.\n'
+  else
+    printf '%bHomebrew was not found.%b Using the official website instead.\n' "$YELLOW" "$RESET"
+    printf 'To install apps directly later, install Homebrew from https://brew.sh/.\n'
+  fi
+  printf 'Official website: %s\n\n' "$url"
+  confirm "Open the official download page for $name?" || return 0
+  rc=0
+  open "$url" || rc=$?
+  record open-download "$name" "$rc"
+  if [ "$rc" -ne 0 ]; then
+    printf '\n%bCould not open your browser (exit code %s).%b\n' "$RED" "$rc" "$RESET"
+    printf 'Copy this URL into a browser: %s\n\n' "$url"
+    press_enter
+    return 1
+  fi
+  printf '\n%bOfficial download page opened.%b Finish installation in your browser.\n\n' "$GREEN" "$RESET"
+  press_enter
 }
 
 install_group(){
-  local group="$1"
-  catalog_init
+  local group="$1" i selected
   local -a labels map
-  labels=(); map=()
-  local i state pkg typ
-  for ((i=0;i<${#CAT_NAMES[@]};i++)); do
-    [ "${CAT_GROUPS[$i]}" = "$group" ] || continue
-    state=""
-    pkg="${CAT_PKGS[$i]}"; typ="${CAT_TYPES[$i]}"
-    if have brew && [ "$typ" != url ]; then
-      if [ "$typ" = cask ]; then
-        brew list --cask "$pkg" >/dev/null 2>&1 && state=" · installed"
+  catalog_init
+  while :; do
+    labels=(); map=()
+    for ((i=0;i<${#CAT_NAMES[@]};i++)); do
+      [ "${CAT_GROUPS[$i]}" = "$group" ] || continue
+      if catalog_installed "$i"; then
+        labels+=("${CAT_NAMES[$i]} — installed")
+      elif [ "${CAT_TYPES[$i]}" = url ]; then
+        labels+=("${CAT_NAMES[$i]} — official website")
       else
-        brew list "$pkg" >/dev/null 2>&1 && state=" · installed"
+        labels+=("${CAT_NAMES[$i]} — download & install")
       fi
-    fi
-    labels+=("${CAT_NAMES[$i]} — ${CAT_DESCS[$i]}$state")
-    map+=("$i")
+      map+=("$i")
+    done
+    labels+=("Back — app categories")
+    menu "$group · Choose an app (Enter to select)" "${labels[@]}"
+    selected="$MENU_RESULT"
+    [ "$selected" -ge 0 ] || return 0
+    [ "$selected" -lt "${#map[@]}" ] || return 0
+    install_app "${map[$selected]}" || true
   done
-
-  multi_menu "Install · $group" "${labels[@]}" || return
-  [ -n "$MULTI_RESULT" ] || return
-
-  header
-  if have brew; then
-    printf '%bHomebrew detected.%b Brew-supported selections install through Homebrew; website-only items open their official page.\n\n' "$GREEN" "$RESET"
-  else
-    printf '%bHomebrew is not installed.%b Zot will open official download pages and will not install a package manager.\n\n' "$YELLOW" "$RESET"
-  fi
-
-  local idx real
-  for idx in $MULTI_RESULT; do
-    real="${map[$idx]}"
-    printf '  %-22s %s\n' "${CAT_NAMES[$real]}" "${CAT_DESCS[$real]}"
-  done
-  printf '\n'
-  confirm "Continue with these selections?" || return
-
-  for idx in $MULTI_RESULT; do
-    real="${map[$idx]}"
-    pkg="${CAT_PKGS[$real]}"
-    typ="${CAT_TYPES[$real]}"
-    printf '\n%b→ %s%b — %s\n' "$ACCENT" "${CAT_NAMES[$real]}" "$RESET" "${CAT_DESCS[$real]}"
-
-    if [ "$typ" = url ]; then
-      open "${CAT_URLS[$real]}" >/dev/null 2>&1 || true
-      record open-download "${CAT_NAMES[$real]}" 0
-    elif have brew; then
-      if [ "$typ" = cask ]; then
-        brew install --cask "$pkg" || true
-      else
-        brew install "$pkg" || true
-      fi
-      record install "${CAT_NAMES[$real]}" 0
-    else
-      open "${CAT_URLS[$real]}" >/dev/null 2>&1 || true
-      record open-download "${CAT_NAMES[$real]}" 0
-    fi
-  done
-
-  printf '\n%bInstall action complete.%b\n\n' "$GREEN" "$RESET"
-  press_enter
 }
 
 install_menu(){
   while :; do
-    menu "Install Apps" \
+    menu "Download & Install Apps" \
       "Browsers — Zen, Firefox, LibreWolf, Tor" \
-      "Utilities — terminal, cursor, menu bar, firewall, display tools" \
-      "Developer — editor, CLI, runtimes, Xcode" \
-      "Back — return to the hub"
+      "Utilities — Raycast, Ice, LuLu, iTerm2, more" \
+      "Developer — VS Code, GitHub CLI, Python, Node, Xcode" \
+      "Back — main menu"
     case "$MENU_RESULT" in
       0) install_group Browsers;;
       1) install_group Utilities;;
