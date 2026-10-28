@@ -10,9 +10,9 @@ for module in "$ROOT"/lib/*.sh; do bash -n "$module"; done
 bash -n "$ROOT/install.sh"
 bash -n "$ROOT/uninstall.sh"
 
-ZOT_HOME="$ROOT" "$ROOT/zot" version | grep -Eq '^3\.4\.1$'
+ZOT_HOME="$ROOT" "$ROOT/zot" version | grep -Eq '^3\.4\.2$'
 HELP_OUTPUT="$(ZOT_HOME="$ROOT" "$ROOT/zot" --help)"
-grep -q 'Zot 3.4.1' <<< "$HELP_OUTPUT"
+grep -q 'Zot 3.4.2' <<< "$HELP_OUTPUT"
 grep -q 'zot mode' <<< "$HELP_OUTPUT"
 grep -q 'zot-login' <<< "$HELP_OUTPUT"
 grep -q 'zot login' <<< "$HELP_OUTPUT"
