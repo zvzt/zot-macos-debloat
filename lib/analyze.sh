@@ -101,16 +101,16 @@ app_valid_bundle(){
 }
 
 app_name_matches(){
-  local leaf candidate length
+  local leaf candidate
   leaf="$(app_lower "$1")"; candidate="$(app_lower "$2")"
   [ -n "$leaf" ] && [ -n "$candidate" ] || return 1
+  # Exact app names or filenames belonging to that exact name.
+  # Prefixes such as "Firefox Nightly" or "Code - Insiders"
+  # are NOT automatically considered the same app.
   case "$leaf" in
-    "$candidate"|"$candidate.app"|"$candidate.plist"|"$candidate.savedstate"|"$candidate.binarycookies") return 0;;
-  esac
-  length="${#candidate}"
-  [ "$length" -ge 4 ] || return 1
-  case "$leaf" in
-    "$candidate".*|"$candidate"-*|"$candidate"_*|"$candidate "*) return 0;;
+    "$candidate"|"$candidate.app"|"$candidate.plist"|"$candidate.savedstate"|\
+    "$candidate.binarycookies"|"$candidate.log"|"$candidate.db"|"$candidate.sqlite")
+      return 0;;
     *) return 1;;
   esac
 }
@@ -152,6 +152,10 @@ app_data_name_alias(){
   name="$(app_lower "$1")"
   case "$name" in
     'google chrome') printf 'Chrome\n';;
+    'google chrome canary') printf 'Chrome Canary\n';;
+    'brave browser') printf 'Brave-Browser\n';;
+    'zen browser') printf 'zen\n';;
+    'opera') printf 'Opera Stable\n';;
     'visual studio code') printf 'Code\n';;
     'microsoft edge') printf 'Edge\n';;
     'firefox developer edition') printf 'Firefox Developer Edition\n';;
