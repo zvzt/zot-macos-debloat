@@ -12,7 +12,7 @@ bash -n "$ROOT/uninstall.sh"
 
 ZOT_HOME="$ROOT" "$ROOT/zot" version | grep -Eq '^3\.4\.0$'
 HELP_OUTPUT="$(ZOT_HOME="$ROOT" "$ROOT/zot" --help)"
-grep -q 'Power & Gaming' <<< "$HELP_OUTPUT"
+grep -q 'Zot 3.4.0' <<< "$HELP_OUTPUT"
 grep -q 'zot mode' <<< "$HELP_OUTPUT"
 grep -q 'zot-login' <<< "$HELP_OUTPUT"
 grep -q 'zot login' <<< "$HELP_OUTPUT"
