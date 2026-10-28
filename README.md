@@ -1,6 +1,6 @@
 # Zot — macOS Debloat
 
-A lightweight terminal hub for cleaning, analyzing, maintaining, and configuring macOS.
+An organized macOS utility for health checks, power modes, cleaning, and reversible service management.
 
 Run `zot` to open the interactive interface. Zot is dependency-free on the tool side: it uses Bash and macOS system utilities already present on the machine. It does not install a Python environment, UI framework, telemetry service, or account service. Optional Login Items are created only when you explicitly enable them, run once at boot/login, and exit instead of staying resident.
 
@@ -39,25 +39,39 @@ Everything Zot owns lives under:
 
 By default, the only system-level files Zot creates are its command symlinks in `/usr/local/bin`. If you explicitly enable Tweaks Auto Apply, Zot also installs a root-owned one-shot LaunchDaemon and root-owned generated helper script for system-level tweak reapplication.
 
-## Hub
+## Main Menu (3.4.0)
 
-The terminal hub uses arrow-key navigation, nested menus, multi-select lists, review screens, and explicit confirmations.
+Run `zot` to see six clear sections:
 
-Main sections:
+1. **Health & Performance** — Power & Gaming, CPU/RAM dashboard, health check.
+2. **Clean & Storage** — clean, scan, analyze large files, uninstall.
+3. **Apps & Updates** — install apps, update Zot, open macOS Software Update.
+4. **Background & Tweaks** — service controls, launchd status, boot/login automation.
+5. **Maintenance & Tools** — DNS, previews, disk checks, history, utility shortcuts.
+6. **Appearance** — color theme.
 
-- **Dashboard / Performance** — live RAM, swap, free disk, uptime, and top processes.
-- **Scan** — read-only size scan of common cleanup locations.
-- **Clean** — quick clean, deep-clean wizard, age-based caches, browser caches, developer caches, and project artifacts.
-- **Analyze Storage** — storage overview, large files, installers, local iPhone/iPad backups, and rebuildable project artifacts.
-- **Apps & Leftovers** — uninstall applications to Trash and review exact bundle-ID leftovers.
-- **Startup & Background** — inspect third-party LaunchAgents/LaunchDaemons, disable selected items, and restore Zot-managed changes.
-- **Login Items** — configure separate Tweaks and Cleaning jobs that run once at boot/login and exit.
-- **Optimize** — bounded maintenance such as DNS flush, Quick Look reset, LaunchServices refresh, disk verification, Spotlight reindex, periodic maintenance, Homebrew cleanup, and unavailable simulator cleanup.
-- **Install Apps** — curated app browser similar to a setup utility.
-- **Services & Features** — Balanced/Aggressive service profiles plus optional Siri, Apple Intelligence, and Spotlight controls.
-- **Tools** — System Doctor, operation history, updater, Activity Monitor, and Storage Settings.
+The previous direct commands (`zot login`, `zot services`, `zot clean`, etc.) remain available.
 
-## Full Maintenance (Zot 3.3.0)\n\nRun `cleanup --dry-run` or `zot full --dry-run` to preview, or `cleanup` or `zot full` to run the reviewed, step-by-step workflow. It updates Homebrew formulae/casks, checks Mac App Store updates with `mas` (when installed), offers macOS system updates, runs Mole `mo clean` and `mo optimize` (when installed), optionally invokes Zot cache/log/Trash cleanup, refreshes DNS, Quick Look, Dock, Finder, SystemUIServer and CoreAudio, then offers graceful app quit and a reboot. Missing optional tools are skipped. App Store/standalone apps not managed by these tools may need manual updates. No background job or unattended reboot is created. Save work first; destructive cleanup and final reboot require confirmations.\n\nOptional dependencies: `brew install mole mas` (install `mas` only when supported).\n\n## Cleaning
+### Power & Gaming
+
+```bash
+zot mode status   # read current Low Power Mode settings
+zot mode health   # read-only CPU, RAM, swap, power diagnostic
+zot mode game     # confirm Low Power Mode OFF on battery and charger
+zot mode battery  # confirm Low Power Mode ON on battery; OFF on charger
+zot mode restore  # restore exact saved original values
+zot audit         # read-only service status / post-reboot verification
+```
+
+Power profiles modify only macOS Low Power Mode, with explicit confirmation and an original-settings backup. macOS persists these power settings without a custom login helper. This is **not** a CPU or GPU overclock, and the M1 MacBook Air has no Apple High Power Mode. Changing modes does not disable controllers, Wi-Fi, Bluetooth, sound, system security, or Apple background services.
+
+**For gaming:** use Apple's native Game Mode for supported fullscreen games. Zot's Aggressive debloat preset can affect Game Controller, printing and other features; do not combine it with gaming unless those tradeoffs are acceptable.
+
+### Standalone Cleanup
+
+The separate user-installed `cleanup` command (desktop reports, application updates, full cleanup/reboot) is **not part of Zot**. Zot does not install, own, or overwrite it. `zot clean` remains Zot's original reviewed cleanup utility.
+
+## Cleaning
 
 Zot distinguishes between rebuildable data and personal files.
 
@@ -249,15 +263,24 @@ Run `zot gui` or `zot-gui` for a lightweight native macOS popup launcher built w
 
 ## Commands
 
-Every command has a short description in `zot --help`. Common shortcuts include:
+Run `zot --help` for every command. Common commands include:
 
 ```text
 zot
 zot status
 zot performance
+zot mode
+zot mode status
+zot mode health
+zot mode game
+zot mode battery
+zot mode restore
+zot audit
 zot gui
 zot theme
 zot-status
+zot-mode
+zot-audit
 zot-performance
 zot-clean
 zot-login

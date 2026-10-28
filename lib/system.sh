@@ -42,8 +42,9 @@ startup_screen(){
 }
 optimize_screen(){
   local -a labels keys
-  labels=("Flush DNS — refresh name-resolution cache" "Reset Quick Look — rebuild preview cache" "Rebuild LaunchServices — refresh app registrations" "Verify Startup Volume — read-only disk check" "Reindex Spotlight — rebuild search index" "Periodic Maintenance — run macOS maintenance scripts")
-  keys=(dns ql ls disk spotlight periodic)
+  labels=("Flush DNS — refresh name-resolution cache" "Reset Quick Look — rebuild preview cache" "Rebuild LaunchServices — refresh app registrations" "Verify Startup Volume — read-only disk check" "Reindex Spotlight — only if indexing is enabled")
+  keys=(dns ql ls disk spotlight)
+  have periodic && { labels+=("Legacy Periodic Scripts — only when available"); keys+=(periodic); }
   have brew && { labels+=("Homebrew Cleanup — old versions and downloads"); keys+=(brew); }; have xcrun && { labels+=("Xcode Simulators — delete unavailable devices"); keys+=(sim); }
   multi_menu "Optimize · safe maintenance tasks" "${labels[@]}" || return; [ -n "$MULTI_RESULT" ] || return
   header; printf '%bOptimization plan%b\n\n' "$BOLD" "$RESET"; local idx; for idx in $MULTI_RESULT; do printf '  %s\n' "${labels[$idx]}"; done
@@ -56,7 +57,7 @@ optimize_screen(){
       ql) qlmanage -r cache 2>/dev/null || true;;
       ls) lsreg="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"; [ -x "$lsreg" ] && "$lsreg" -kill -r -domain local -domain system -domain user >/dev/null 2>&1 || true;;
       disk) diskutil verifyVolume / || true;;
-      spotlight) sudo mdutil -E / || true;;
+      spotlight) if mdutil -s / 2>/dev/null | grep -qi 'Indexing enabled'; then sudo mdutil -E / || true; else echo "Spotlight indexing is disabled; skipped."; fi;;
       periodic) sudo periodic daily weekly monthly || true;;
       brew) brew cleanup -s || true;;
       sim) xcrun simctl delete unavailable || true;;
@@ -97,17 +98,76 @@ services_restore(){
   while IFS='|' read -r kind label; do [ -n "$label" ] || continue; if [ "$kind" = user ]; then launchctl enable "gui/$UID_NUM/$label" >/dev/null 2>&1 || true; else sudo launchctl enable "system/$label" >/dev/null 2>&1 || true; fi; done < "$SERVICE_STATE"
   : > "$SERVICE_STATE"; if [ -f "$SPOTLIGHT_STATE" ]; then sudo mdutil -i on / >/dev/null 2>&1 || true; rm -f "$SPOTLIGHT_STATE"; fi; record services-restore all 0
 }
+services_audit(){
+  load_config
+  local labels label kind domain state loaded total=0 disabled=0
+  printf 'Service state audit (read-only)\n'
+  printf 'Saved profile: %s | Siri: %s | AI: %s | Spotlight: %s\n' "$PROFILE" "$SIRI" "$INTELLIGENCE" "$SPOTLIGHT"
+  printf 'Login reapply: '
+  if login_tweaks_enabled || login_system_enabled; then echo ON; else echo OFF; fi
+  printf 'This lists configured targets; a disabled override is not proof that a process has stopped.\n\n'
+  printf '%-49s %-19s\n' "Target service" "launchd state"
+  printf '%-49s %-19s\n' "----------------------------------------------" "-------------------"
+  labels="$( { service_desired; if login_tweaks_enabled || login_system_enabled; then login_tweak_load; login_profile_labels; fi; } | awk 'NF && !seen[$0]++')"
+  while IFS= read -r label; do
+    [ -n "$label" ] || continue
+    total=$((total+1))
+    kind="$(plist_kind "$label" | head -1)"
+    case "$kind" in
+      user) domain="gui/$UID_NUM";;
+      system) domain=system;;
+      *) domain="";;
+    esac
+    if [ -z "$domain" ]; then
+      state="not found on this OS"
+    elif actual_disabled "$domain" "$label"; then
+      state="disabled override"
+      disabled=$((disabled+1))
+    elif registered "$domain" "$label"; then
+      state="registered/enabled"
+    else
+      state="not loaded/unknown"
+    fi
+    printf '%-49.49s %-19s\n' "$label" "$state"
+  done <<< "$labels"
+  printf '\nConfigured targets: %s | disabled overrides found: %s\n' "$total" "$disabled"
+  printf 'Check again after reboot to verify persistence.\n'
+}
+
+services_audit_screen(){
+  header
+  services_audit
+  printf '\n'
+  press_enter
+}
+
 services_screen(){
   load_config
   while :; do
-    menu "Services & Features" "Profile: $PROFILE — balanced or aggressive services" "Siri: $SIRI — voice assistant services" "Apple Intelligence: $INTELLIGENCE — AI background services" "Spotlight: $SPOTLIGHT — search indexing preference" "Apply Configuration — apply selected service settings" "Restore Service Changes — undo Zot service changes" "Back — return to the hub"
+    menu "Services & Privacy" \
+      "Inspect service status — read-only audit" \
+      "Preset: $PROFILE — Balanced / Aggressive" \
+      "Siri: $SIRI — enable or disable" \
+      "Apple Intelligence: $INTELLIGENCE — enable or disable" \
+      "Spotlight: $SPOTLIGHT — indexing preference" \
+      "Apply saved service selections" \
+      "Restore Zot-managed service changes" \
+      "Back — main menu"
     case "$MENU_RESULT" in
-      0) [ "$PROFILE" = balanced ] && PROFILE=aggressive || PROFILE=balanced; save_config;;
-      1) [ "$SIRI" = keep ] && SIRI=disable || SIRI=keep; save_config;;
-      2) [ "$INTELLIGENCE" = keep ] && INTELLIGENCE=disable || INTELLIGENCE=keep; save_config;;
-      3) [ "$SPOTLIGHT" = keep ] && SPOTLIGHT=off || SPOTLIGHT=keep; save_config;;
-      4) header; printf '%bBalanced/aggressive service changes can affect optional macOS features.%b\n\n' "$YELLOW" "$RESET"; confirm "Apply this configuration?" && services_apply; printf '\n'; press_enter;;
-      5) header; confirm "Restore service changes recorded by Zot?" && services_restore; printf '\n%bRestore complete.%b\n' "$GREEN" "$RESET"; press_enter;;
+      0) services_audit_screen;;
+      1) [ "$PROFILE" = balanced ] && PROFILE=aggressive || PROFILE=balanced; save_config;;
+      2) [ "$SIRI" = keep ] && SIRI=disable || SIRI=keep; save_config;;
+      3) [ "$INTELLIGENCE" = keep ] && INTELLIGENCE=disable || INTELLIGENCE=keep; save_config;;
+      4) [ "$SPOTLIGHT" = keep ] && SPOTLIGHT=off || SPOTLIGHT=keep; save_config;;
+      5)
+        header
+        printf '%bAggressive may disable Game Controller, printing, HomeKit and other features.%b\n\n' "$YELLOW" "$RESET"
+        confirm "Apply these service selections?" && services_apply
+        printf '\n'; press_enter;;
+      6)
+        header
+        confirm "Restore services recorded by Zot? (May also re-enable Spotlight.)" && services_restore
+        printf '\n'; press_enter;;
       *) return;;
     esac
   done

@@ -5,14 +5,14 @@ TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
 bash -n "$ROOT/zot"
-bash -n "$ROOT"/lib/*.sh
+for module in "$ROOT"/lib/*.sh; do bash -n "$module"; done
 bash -n "$ROOT/install.sh"
 bash -n "$ROOT/uninstall.sh"
 
-ZOT_HOME="$ROOT" "$ROOT/zot" version | grep -Eq '^3\.2\.0$'
+ZOT_HOME="$ROOT" "$ROOT/zot" version | grep -Eq '^3\.4\.0$'
 HELP_OUTPUT="$(ZOT_HOME="$ROOT" "$ROOT/zot" --help)"
-grep -q 'interactive terminal hub' <<< "$HELP_OUTPUT"
-grep -q 'zot-status' <<< "$HELP_OUTPUT"
+grep -q 'Power & Gaming' <<< "$HELP_OUTPUT"
+grep -q 'zot mode' <<< "$HELP_OUTPUT"
 grep -q 'zot-login' <<< "$HELP_OUTPUT"
 grep -q 'zot login' <<< "$HELP_OUTPUT"
 
@@ -33,7 +33,7 @@ grep -q 'Please type Y or N' "$ROOT/install.sh"
 grep -q 'zot-login' "$ROOT/install.sh"
 grep -q 'lib/login.sh' "$ROOT/install.sh"
 
-grep -q 'Login Items' "$ROOT/lib/hub.sh"
+grep -q 'Login Automation' "$ROOT/lib/hub.sh"
 grep -q 'Tweaks — choose what Zot reapplies at boot/login' "$ROOT/lib/login.sh"
 grep -q 'Cleaning — choose what Zot cleans each login' "$ROOT/lib/login.sh"
 grep -q 'Enable Auto Apply for these tweaks at login?' "$ROOT/lib/login.sh"
@@ -52,7 +52,7 @@ grep -q 'chmod 700.*LOGIN_SYSTEM_SCRIPT' "$ROOT/lib/login.sh"
 
 ! grep -q 'Communication' "$ROOT/lib/hub.sh"
 ! grep -q 'Media' "$ROOT/lib/hub.sh"
-! grep -q 'Gaming' "$ROOT/lib/hub.sh"
+grep -q 'Gaming' "$ROOT/lib/hub.sh"
 ! grep -q 'Google Chrome' "$ROOT/lib/hub.sh"
 ! grep -q 'Brave Browser' "$ROOT/lib/hub.sh"
 ! grep -q '"Arc"' "$ROOT/lib/hub.sh"
@@ -60,7 +60,7 @@ grep -q '"Zen"' "$ROOT/lib/hub.sh"
 grep -q '"LibreWolf"' "$ROOT/lib/hub.sh"
 grep -q '"Tor Browser"' "$ROOT/lib/hub.sh"
 
-! grep -q '/System/Library/LaunchAgents' "$ROOT/lib/system.sh"
+grep -q 'START_PATHS' "$ROOT/lib/system.sh"
 grep -q 'Delete all previous-version data' "$ROOT/install.sh"
 grep -q '\.macos-debloat' "$ROOT/install.sh"
 grep -q '\.zxt-macos-debloat' "$ROOT/install.sh"
@@ -69,4 +69,11 @@ grep -q 'Age-based Cache Clean' "$ROOT/lib/clean.sh"
 grep -q 'Large Files' "$ROOT/lib/analyze.sh"
 grep -q 'Restore Zot Changes' "$ROOT/lib/system.sh"
 
+grep -q 'lib/mode.sh' "$ROOT/install.sh"
+grep -q 'zot-mode' "$ROOT/install.sh"
+grep -q 'zot-audit' "$ROOT/install.sh"
+! grep -q 'lib/full.sh' "$ROOT/install.sh"
+! grep -q 'zot cleanup' "$ROOT/install.sh"
+ZOT_HOME="$ROOT" "$ROOT/zot" mode status | grep -q 'Low Power Mode:'
+ZOT_HOME="$ROOT" "$ROOT/zot" audit | grep -q 'Service state audit'
 echo "Zot smoke tests passed."

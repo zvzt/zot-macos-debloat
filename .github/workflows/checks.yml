@@ -12,14 +12,16 @@ jobs:
       - name: Check shell syntax
         run: |
           bash -n zot
-          bash -n lib/*.sh
+          for module in lib/*.sh; do bash -n "$module"; done
           bash -n install.sh
           bash -n uninstall.sh
           bash -n tests/test_zot.sh
+          bash -n tests/smoke.sh
       - name: Run Zot smoke tests
         run: |
           chmod +x zot tests/test_zot.sh
           tests/test_zot.sh
+          bash tests/smoke.sh
       - name: Check CLI basics
         run: |
           ZOT_HOME="$PWD" ./zot version

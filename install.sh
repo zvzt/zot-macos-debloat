@@ -141,7 +141,7 @@ cleanup_previous_versions(){
 }
 
 echo "Downloading Zot..."
-for file in zot lib/common.sh lib/clean.sh lib/analyze.sh lib/system.sh lib/login.sh lib/full.sh lib/hub.sh presets/balanced.txt presets/aggressive.txt presets/siri.txt presets/apple-intelligence.txt; do
+for file in zot lib/common.sh lib/clean.sh lib/analyze.sh lib/system.sh lib/login.sh lib/mode.sh lib/hub.sh presets/balanced.txt presets/aggressive.txt presets/siri.txt presets/apple-intelligence.txt; do
   fetch "$file"
 done
 
@@ -183,7 +183,7 @@ cp "$TMP"/presets/*.txt "$PRESETS/"
 chmod +x "$INSTALL/zot"
 
 ALIASES=(
-  zot cleanup zot-status zot-performance zot-scan zot-clean zot-analyze zot-apps
+  zot zot-mode zot-audit zot-status zot-performance zot-scan zot-clean zot-analyze zot-apps
   zot-startup zot-login zot-optimize zot-install zot-services zot-theme zot-gui
   zot-doctor zot-history zot-restore zot-update
 )
@@ -195,4 +195,4 @@ else
   for name in "${ALIASES[@]}"; do sudo ln -sf "$INSTALL/zot" "/usr/local/bin/$name"; done
 fi
 
-printf '\nZot installed.\n\nRun:\n  zot\n\nQuick commands:\n  zot-status\n  zot-performance\n  zot-clean\n  zot-login\n  zot-optimize\n  zot-install\n  zot-gui\n\nNo extra runtime, Python package, auto-login item, or background service was installed.\n'
+printf '\nZot installed.\n\nRun:\n  zot\n\nQuick commands:\n  zot mode\n  zot-mode\n  zot-audit\n  zot-clean\n  zot-login\n  zot-optimize\n  zot-install\n  zot-gui\n\nNo extra runtime, Python package, auto-login item, or background service was installed.\n'

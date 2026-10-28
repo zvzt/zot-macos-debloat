@@ -1,5 +1,17 @@
 # Changelog
 
+## 3.4.0
+
+- Consolidated the interface into six named areas with shorter, clearer navigation.
+- Added **Power & Gaming** profiles, power status, live health checks, and exact restore of previous Low Power Mode settings.
+- Added `zot mode [status|health|game|battery|restore]` and `zot audit` commands and `zot-mode`/`zot-audit` shortcuts.
+- Made service-audit output show configured targets, disabled overrides and post-reboot verification guidance.
+- Removed legacy `full`/standalone `cleanup` hooks from Zot and its installer. Standalone Mac Cleanup remains independent.
+- Skip obsolete periodic scripts if the command does not exist, and avoid Spotlight reindexing when indexing is off.
+- Maintained existing saved service presets, boot/login reapply jobs, and direct commands.
+- Power profiles do not turn off SIP, security services, input, audio, network, or controller services.
+
+
 ## 3.2.0
 
 - Added a dedicated **Login Items** hub.

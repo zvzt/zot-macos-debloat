@@ -259,33 +259,19 @@ popup_hub(){
   local choice
   while :; do
     choice="$(osascript <<'APPLESCRIPT' 2>/dev/null || true
-set choices to {"Status — configuration overview", "Performance — live CPU/RAM", "Scan — read-only storage scan", "Clean — cleanup hub", "Analyze — storage explorer", "Apps — uninstall and leftovers", "Startup — background/login items", "Login — Zot auto-run items", "Optimize — maintenance tasks", "Install — curated apps", "Services — macOS feature controls", "Theme — terminal colors", "Quit"}
-set picked to choose from list choices with title "Zot" with prompt "macOS Utility Hub" default items {"Status — configuration overview"} OK button name "Open" cancel button name "Quit"
+set choices to {"Health & Performance", "Clean & Storage", "Apps & Updates", "Background & Tweaks", "Maintenance & Tools", "Appearance", "Quit"}
+set picked to choose from list choices with title "Zot" with prompt "Choose a section" default items {"Health & Performance"} OK button name "Open" cancel button name "Quit"
 if picked is false then return "Quit"
 return item 1 of picked
 APPLESCRIPT
 )"
     case "$choice" in
-      "Status"*) 
-        local summary
-        summary="$(status_plain)"
-        osascript - "$summary" <<'APPLESCRIPT' >/dev/null 2>&1 || true
-on run argv
-  display dialog item 1 of argv with title "Zot Status" buttons {"Done"} default button "Done"
-end run
-APPLESCRIPT
-        ;;
-      "Performance"*) status_screen;;
-      "Scan"*) scan_screen;;
-      "Clean"*) clean_menu;;
-      "Analyze"*) analyze_menu;;
-      "Apps"*) apps_screen;;
-      "Startup"*) startup_screen;;
-      "Login"*) login_hub;;
-      "Optimize"*) optimize_screen;;
-      "Install"*) install_menu;;
-      "Services"*) services_screen;;
-      "Theme"*) theme_menu;;
+      "Health"*) health_menu;;
+      "Clean"*) storage_menu;;
+      "Apps"*) apps_updates_menu;;
+      "Background"*) background_menu;;
+      "Maintenance"*) maintenance_menu;;
+      "Appearance"*) theme_menu;;
       *) return;;
     esac
   done
@@ -307,22 +293,106 @@ update_zot(){
 tools_menu(){
   while :; do
     menu "Tools" \
-      "System Doctor — quick health checks" \
-      "Operation History — recent Zot changes" \
-      "Color Customization — choose terminal theme" \
-      "Native Popup Hub — built-in macOS dialog launcher" \
-      "Update Zot — install latest version" \
-      "Activity Monitor — open Apple's process monitor" \
-      "Storage Settings — open macOS storage settings" \
-      "Back — return to the hub"
+      "System Check — macOS, disk, RAM, Spotlight" \
+      "Recent Actions — Zot operation history" \
+      "Update Zot — fetch latest from GitHub" \
+      "Activity Monitor — open macOS monitor" \
+      "Storage Settings — open macOS settings" \
+      "Appearance — choose terminal colors" \
+      "Back — previous menu"
     case "$MENU_RESULT" in
       0) doctor_screen;;
       1) history_screen;;
-      2) theme_menu;;
-      3) popup_hub;;
-      4) update_zot;;
-      5) open -a 'Activity Monitor' >/dev/null 2>&1 || true;;
-      6) open 'x-apple.systempreferences:com.apple.settings.Storage' >/dev/null 2>&1 || true;;
+      2) update_zot;;
+      3) open -a 'Activity Monitor' >/dev/null 2>&1 || true;;
+      4) open 'x-apple.systempreferences:com.apple.settings.Storage' >/dev/null 2>&1 || true;;
+      5) theme_menu;;
+      *) return;;
+    esac
+  done
+}
+
+health_menu(){
+  while :; do
+    menu "Health & Performance" \
+      "Power & Gaming — select a reversible power mode" \
+      "Live Performance — CPU, RAM, swap, active processes" \
+      "System Check — disk, memory, Apple security" \
+      "Zot Status — saved tweaks and login automation" \
+      "Back — main menu"
+    case "$MENU_RESULT" in
+      0) mode_menu;;
+      1) status_screen;;
+      2) doctor_screen;;
+      3) overview_status_screen;;
+      *) return;;
+    esac
+  done
+}
+
+storage_menu(){
+  while :; do
+    menu "Clean & Storage" \
+      "Clean — reviewed caches, logs and junk files" \
+      "Scan — see recoverable storage without deletion" \
+      "Find Large Files — installers, backups and projects" \
+      "Uninstall Apps — review apps and leftovers" \
+      "Back — main menu"
+    case "$MENU_RESULT" in
+      0) clean_menu;;
+      1) scan_screen;;
+      2) analyze_menu;;
+      3) apps_screen;;
+      *) return;;
+    esac
+  done
+}
+
+apps_updates_menu(){
+  while :; do
+    menu "Apps & Updates" \
+      "Install Apps — curated optional applications" \
+      "Update Zot — download the newest tool version" \
+      "macOS Updates — open System Settings" \
+      "Back — main menu"
+    case "$MENU_RESULT" in
+      0) install_menu;;
+      1) update_zot;;
+      2) open 'x-apple.systempreferences:com.apple.Software-Update-Settings.extension' >/dev/null 2>&1 || open -a 'System Settings';;
+      *) return;;
+    esac
+  done
+}
+
+background_menu(){
+  while :; do
+    menu "Background & Tweaks" \
+      "Service Controls — Siri, AI, Spotlight and presets" \
+      "Service Status — verify launchd overrides" \
+      "Login Automation — reapply tweaks after restart" \
+      "Startup Apps — inspect and manage third-party jobs" \
+      "Back — main menu"
+    case "$MENU_RESULT" in
+      0) services_screen;;
+      1) services_audit_screen;;
+      2) login_hub;;
+      3) startup_screen;;
+      *) return;;
+    esac
+  done
+}
+
+maintenance_menu(){
+  while :; do
+    menu "Maintenance & Tools" \
+      "System Maintenance — DNS, Quick Look, disk checks" \
+      "Tools — diagnostics, history, update and settings" \
+      "Standalone Cleaner — separate local cleanup command" \
+      "Back — main menu"
+    case "$MENU_RESULT" in
+      0) optimize_screen;;
+      1) tools_menu;;
+      2) header; printf 'Your local cleanup command is independent of Zot.\nRun cleanup from Terminal if you installed it separately.\n\n'; press_enter;;
       *) return;;
     esac
   done
@@ -332,38 +402,22 @@ hub(){
   while :; do
     basic_snapshot
     MENU_SUBTITLE="$SNAP_MODEL · $SNAP_FREE free · RAM $SNAP_MEM"
-    menu "Hub" \
-      "Status — macOS features, Zot profile, optimization state" \
-      "Performance — live CPU, RAM, swap, and top processes" \
-      "Scan — read-only cleanup and storage estimate" \
-      "Clean — caches, browsers, developer files, projects" \
-      "Analyze Storage — large files, installers, backups" \
-      "Apps & Leftovers — uninstall apps and related files" \
-      "Startup & Background — manage existing login/background jobs" \
-      "Login Items — auto-reapply tweaks or auto-clean at login" \
-      "Optimize — safe macOS maintenance tasks" \
-      "Install Apps — curated browsers, utilities, developer tools" \
-      "Services & Features — profile, Siri, AI, Spotlight" \
-      "Appearance — customize Zot terminal colors" \
-      "Tools — doctor, history, popup hub, update" \
-      "Full Maintenance — updates, clean, optimize, refresh, restart" \
+    menu "Main Menu" \
+      "Health & Performance — live usage and power modes" \
+      "Clean & Storage — clear junk and manage space" \
+      "Apps & Updates — install tools and update Zot" \
+      "Background & Tweaks — services and login jobs" \
+      "Maintenance & Tools — system refresh and diagnostics" \
+      "Appearance — terminal colors" \
       "Quit — close Zot"
     MENU_SUBTITLE=""
     case "$MENU_RESULT" in
-      0) overview_status_screen;;
-      1) status_screen;;
-      2) scan_screen;;
-      3) clean_menu;;
-      4) analyze_menu;;
-      5) apps_screen;;
-      6) startup_screen;;
-      7) login_hub;;
-      8) optimize_screen;;
-      9) install_menu;;
-      10) services_screen;;
-      11) theme_menu;;
-      12) tools_menu;;
-      13) full_maintenance;;
+      0) health_menu;;
+      1) storage_menu;;
+      2) apps_updates_menu;;
+      3) background_menu;;
+      4) maintenance_menu;;
+      5) theme_menu;;
       *) clear; return;;
     esac
   done
@@ -371,47 +425,43 @@ hub(){
 
 usage(){
   cat <<EOF
-Zot $VERSION
+Zot $VERSION — macOS utility
 
-Commands:
-  zot                         interactive terminal hub
-  zot status                  current Zot/macOS configuration overview
-  zot performance             live CPU, RAM, swap, and process dashboard
-  zot scan                    read-only cleanup/storage scan
-  zot clean                   cache and rebuildable-file cleanup hub\n  zot full                    update, clean, optimize, refresh and optionally reboot\n  zot full --dry-run          preview full maintenance without changes
-  zot analyze                 large-file, installer, and backup analyzer
-  zot apps                    app uninstaller and leftover reviewer
-  zot startup                 inspect existing login/background items
-  zot login                   configure Zot tweaks/cleaning at login
-  zot optimize                safe maintenance and optimization tasks
-  zot install                 curated app installer
-  zot services                macOS service/profile controls
-  zot theme                   terminal color customization
-  zot gui                     native macOS popup launcher
-  zot doctor                  quick system health checks
-  zot history                 recent Zot operations
-  zot restore                 restore Zot-managed service/startup changes
-  zot update                  update Zot
-  zot version                 print Zot version
+Start here:
+  zot                       Open the simplified menu
+  zot mode                  Choose Gaming / Battery Saver / Restore
+  zot mode status           Read-only power settings
+  zot mode health           CPU, RAM, swap, power and throttling hints
+  zot mode game             Keep Low Power Mode OFF (review & confirm)
+  zot mode battery          Low Power Mode ON on battery (confirm)
+  zot mode restore          Restore saved original power settings
 
-Hyphen shortcuts:
-  zot-status                  configuration overview
-  zot-performance             live performance dashboard
-  zot-scan                    read-only scan
-  zot-clean                   cleanup hub
-  zot-analyze                 storage analyzer
-  zot-apps                    app uninstaller
-  zot-startup                 startup manager
-  zot-login                   Zot login-items hub
-  zot-optimize                optimization hub
-  zot-install                 app installer
-  zot-services                service controls
-  zot-theme                   color customization
-  zot-gui                     native popup launcher
-  zot-doctor                  system doctor
-  zot-history                 operation history
-  zot-restore                 restore Zot-managed changes
-  zot-update                  update Zot
+Maintenance:
+  zot status                Zot settings and login jobs
+  zot performance           Live CPU / RAM dashboard
+  zot doctor                Read-only system health
+  zot audit                 Read-only service/persistence audit
+  zot clean                 Reviewed cache cleanup (Zot)
+  zot scan                  Read-only storage estimate
+  zot analyze               Large files and disk analyzer
+  zot optimize              Selected maintenance tasks
+  zot apps                  Uninstall and review leftovers
+  zot install               Curated app installer
+  zot update                Update Zot
+
+Advanced:
+  zot services              Service & privacy controls
+  zot services audit        Read-only service audit
+  zot login                 Configure login reapply jobs
+  zot startup               Startup/background services
+  zot restore               Restore Zot-managed service/startup changes
+  zot history               Operations history
+  zot theme                 Appearance
+  zot gui                   Native macOS popup launcher
+  zot help                  Show this help
+
+Original zot-* aliases remain available. The separate local
+"cleanup" command is NOT installed or managed by Zot.
 EOF
 }
 
@@ -441,29 +491,30 @@ restore_all(){
 
 main(){
   load_config
-
   local invoked cmd
   invoked="$(basename "$0")"
   if [[ "$invoked" == zot-* ]]; then
     cmd="${invoked#zot-}"
   else
     cmd="${1:-}"
+    [ "$#" -gt 0 ] && shift
   fi
 
   case "$cmd" in
     '') if [ -t 0 ] && [ -t 1 ]; then hub; else usage; fi;;
+    mode|power|gaming) mode_command "${1:-}";;
     status) overview_status;;
     performance) status_screen;;
+    audit) services_audit;;
     scan) scan_screen;;
     clean) clean_menu;;
-    full|cleanup) if [ "${2:-}" = "--dry-run" ]; then full_maintenance dry-run; else full_maintenance; fi;;
     analyze) analyze_menu;;
     apps) apps_screen;;
     startup) startup_screen;;
     login) login_hub;;
     optimize) optimize_screen;;
     install) install_menu;;
-    services) services_screen;;
+    services) if [ "${1:-}" = audit ] || [ "${1:-}" = status ]; then services_audit; else services_screen; fi;;
     theme|appearance) theme_menu;;
     gui|popup) popup_hub;;
     doctor) doctor_screen;;
