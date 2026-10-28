@@ -460,7 +460,8 @@ Advanced:
   zot gui                   Native macOS popup launcher
   zot help                  Show this help
 
-Original zot-* aliases remain available. The separate local
+Quick aliases: zot-status, zot-login, zot-mode, zot-audit, zot-clean.
+Other existing zot-* aliases remain available. The separate local
 "cleanup" command is NOT installed or managed by Zot.
 EOF
 }
