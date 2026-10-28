@@ -76,5 +76,6 @@ grep -q 'zot-audit' "$ROOT/install.sh"
 ! grep -q 'lib/full.sh' "$ROOT/install.sh"
 ! grep -q 'zot cleanup' "$ROOT/install.sh"
 ZOT_HOME="$ROOT" "$ROOT/zot" mode status | grep -q 'Low Power Mode:'
-ZOT_HOME="$ROOT" "$ROOT/zot" audit | grep -q 'Service state audit'
+AUDIT_OUTPUT="$(ZOT_HOME="$ROOT" "$ROOT/zot" audit)"
+grep -q 'Service state audit' <<< "$AUDIT_OUTPUT"
 echo "Zot smoke tests passed."
