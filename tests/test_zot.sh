@@ -10,9 +10,9 @@ for module in "$ROOT"/lib/*.sh; do bash -n "$module"; done
 bash -n "$ROOT/install.sh"
 bash -n "$ROOT/uninstall.sh"
 
-ZOT_HOME="$ROOT" "$ROOT/zot" version | grep -Eq '^3\.4\.0$'
+ZOT_HOME="$ROOT" "$ROOT/zot" version | grep -Eq '^3\.4\.1$'
 HELP_OUTPUT="$(ZOT_HOME="$ROOT" "$ROOT/zot" --help)"
-grep -q 'Zot 3.4.0' <<< "$HELP_OUTPUT"
+grep -q 'Zot 3.4.1' <<< "$HELP_OUTPUT"
 grep -q 'zot mode' <<< "$HELP_OUTPUT"
 grep -q 'zot-login' <<< "$HELP_OUTPUT"
 grep -q 'zot login' <<< "$HELP_OUTPUT"
@@ -20,6 +20,8 @@ grep -q 'zot login' <<< "$HELP_OUTPUT"
 ln -sf "$ROOT/zot" "$TMP/zot-status"
 STATUS_OUTPUT="$(ZOT_HOME="$ROOT" "$TMP/zot-status")"
 grep -q 'Spotlight actual:' <<< "$STATUS_OUTPUT"
+grep -q 'Saved service disable records:' <<< "$STATUS_OUTPUT"
+grep -q 'Verify live overrides: zot audit' <<< "$STATUS_OUTPUT"
 grep -q 'Login Tweaks Auto Apply:' <<< "$STATUS_OUTPUT"
 grep -q 'Login Cleaning Auto Run:' <<< "$STATUS_OUTPUT"
 grep -q 'Persistent background process: none' <<< "$STATUS_OUTPUT"
