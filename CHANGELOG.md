@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.4.1
+
+- Clarify that service change records are not a count of currently disabled launchd overrides; use `zot audit` to verify live state.
+- Show selected automatic login-cleaning categories in Zot Status.
+- Include SIP, FileVault, firewall, Gatekeeper, sealed snapshot and Time Machine destination diagnostics in System Check.
+- These diagnostics are read-only and do not alter the user's macOS settings.
+
 ## 3.4.0
 
 - Consolidated the interface into six named areas with shorter, clearer navigation.
