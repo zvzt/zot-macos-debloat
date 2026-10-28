@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.4.2
+
+- Rebuilt app downloads around arrow-key selection: choose a category, choose one app using Enter, review the action, confirm.
+- Use Homebrew to install verified app/formula IDs when available; otherwise offer official download pages.
+- Detect many already-installed apps from /Applications and Homebrew, and avoid unnecessary duplicate installations.
+- Report Homebrew errors and actual exit codes rather than falsely claiming success.
+- Added installer mock tests for successful installs, failures, and browser fallback.
+
+
 ## 3.4.1
 
 - Clarify that service change records are not a count of currently disabled launchd overrides; use `zot audit` to verify live state.
