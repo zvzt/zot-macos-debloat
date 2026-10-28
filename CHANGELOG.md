@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.4.3
+
+- **Install apps:** When Homebrew is missing, offer the official Homebrew installer with explicit approval, verify success and continue with the selected app. Keep official-site fallback for declined or failed setup. Added `zot homebrew` and an Install Homebrew menu entry.
+- **Uninstall apps:** Scan exact bundle identifiers and bounded app-name matches across common user-library directories, including browser profiles, cookies, history, preferences, containers and app-specific caches/logs. Review all matched paths before moving the app and its data to Trash.
+- Treat potentially shared app-extension files and Group Containers as **separate, opt-in** removal choices.
+- Avoid symlink traversal and unrelated similarly named directories. Do not claim Keychain, cloud, other-user or system-wide data are removed.
+- Add mocked Homebrew setup and app uninstaller tests to macOS CI.
+
+
 ## 3.4.2
 
 - Rebuilt app downloads around arrow-key selection: choose a category, choose one app using Enter, review the action, confirm.
