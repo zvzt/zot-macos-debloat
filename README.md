@@ -239,7 +239,7 @@ The Install section is intentionally small and curated. Every item includes a sh
 - **Node.js** — JavaScript runtime
 - **Xcode** — Apple app development IDE
 
-If Homebrew is already installed, Zot uses it for supported selections. If Homebrew is not installed, Zot opens official download pages instead. Mousecape and Xcode always open their official download/developer pages. Zot never silently installs a package manager.
+Select **Apps & Updates → Install Apps**, choose a category, highlight an app and press **Enter**. Zot shows what it will do and asks for confirmation before installing anything. You do **not** need to press Space or select multiple apps. With Homebrew available, supported apps are downloaded and installed using verified cask/formula names; existing installations are marked **installed** and skipped. If an installation fails, Zot displays the error rather than reporting success. Without Homebrew, Zot offers the official download website. Mousecape and Xcode always open their official download/developer pages, which require you to finish installation manually. Zot never silently installs a package manager.
 
 ## Service Profiles
 
