@@ -27,8 +27,8 @@ ln -s "$HOME/Library/Application Support/SomeOtherApp" "$HOME/Library/Caches/org
 source "$ROOT/lib/analyze.sh"
 APP_DATA_PATHS=() APP_SHARED_PATHS=()
 app_scan_data "Firefox" "org.mozilla.firefox"
-data_listing="$(printf '%s\n' "${APP_DATA_PATHS[@]}")"
-shared_listing="$(printf '%s\n' "${APP_SHARED_PATHS[@]}")"
+data_listing="$(printf '%s\n' ${APP_DATA_PATHS[@]+"${APP_DATA_PATHS[@]}"})"
+shared_listing="$(printf '%s\n' ${APP_SHARED_PATHS[@]+"${APP_SHARED_PATHS[@]}"})"
 grep -Fxq "$HOME/Library/Application Support/Firefox" <<< "$data_listing"
 grep -Fxq "$HOME/Library/Preferences/org.mozilla.firefox.plist" <<< "$data_listing"
 grep -Fxq "$HOME/Library/Caches/org.mozilla.firefox" <<< "$data_listing"
@@ -42,11 +42,11 @@ grep -Fxq "$HOME/Library/Preferences/org.mozilla.firefox.helper.plist" <<< "$sha
 ! grep -Fq 'group.org.mozilla.firefox' <<< "$data_listing"
 
 app_scan_data "Visual Studio Code" "com.microsoft.VSCode"
-! grep -Fq 'Code - Insiders' <<< "$(printf '%s\n' "${APP_DATA_PATHS[@]}")"
+! grep -Fq 'Code - Insiders' <<< "$(printf '%s\n' ${APP_DATA_PATHS[@]+"${APP_DATA_PATHS[@]}"})"
 
 app_scan_data "Google Chrome" "com.google.Chrome"
-grep -Fxq "$HOME/Library/Application Support/Google/Chrome" <<< "$(printf '%s\n' "${APP_DATA_PATHS[@]}")"
-! grep -Fxq "$HOME/Library/Application Support/Google" <<< "$(printf '%s\n' "${APP_DATA_PATHS[@]}")"
+grep -Fxq "$HOME/Library/Application Support/Google/Chrome" <<< "$(printf '%s\n' ${APP_DATA_PATHS[@]+"${APP_DATA_PATHS[@]}"})"
+! grep -Fxq "$HOME/Library/Application Support/Google" <<< "$(printf '%s\n' ${APP_DATA_PATHS[@]+"${APP_DATA_PATHS[@]}"})"
 
 # Simulate a reviewed uninstall without deleting anything in the actual runner home.
 APP="$HOME/Applications/Firefox.app"

@@ -137,7 +137,7 @@ app_add_data(){
   local path="$1" kind="$2" existing
   app_safe_data_path "$path" || return 0
   # Guard empty arrays for macOS Bash 3.2 running with set -u.
-  for existing in "${APP_DATA_PATHS[@]+"${APP_DATA_PATHS[@]}"}" "${APP_SHARED_PATHS[@]+"${APP_SHARED_PATHS[@]}"}"; do
+  for existing in ${APP_DATA_PATHS[@]+"${APP_DATA_PATHS[@]}"} ${APP_SHARED_PATHS[@]+"${APP_SHARED_PATHS[@]}"}; do
     [ "$existing" = "$path" ] && return 0
     case "$path" in "$existing/"*) return 0;; esac
   done
@@ -258,13 +258,13 @@ app_review_uninstall(){
   if [ "$count" -eq 0 ]; then
     printf '  No high-confidence user data found.\n'
   else
-    for path in "${APP_DATA_PATHS[@]+"${APP_DATA_PATHS[@]}"}"; do
+    for path in ${APP_DATA_PATHS[@]+"${APP_DATA_PATHS[@]}"}; do
       printf '  %s · %s\n' "${path#$HOME/}" "$(fmt_bytes "$(path_bytes "$path")")"
     done
   fi
   if [ "$shared_count" -gt 0 ]; then
     printf '\n%bPossible shared data (%s; not selected for removal):%b\n' "$YELLOW" "$shared_count" "$RESET"
-    for path in "${APP_SHARED_PATHS[@]+"${APP_SHARED_PATHS[@]}"}"; do
+    for path in ${APP_SHARED_PATHS[@]+"${APP_SHARED_PATHS[@]}"}; do
       printf '  %s\n' "${path#$HOME/}"
     done
   fi
@@ -282,7 +282,7 @@ app_review_uninstall(){
     press_enter; return 1
   }
   success=$((success+1))
-  for path in "${APP_DATA_PATHS[@]+"${APP_DATA_PATHS[@]}"}"; do
+  for path in ${APP_DATA_PATHS[@]+"${APP_DATA_PATHS[@]}"}; do
     if app_safe_data_path "$path" && app_move_to_trash_checked "$path" uninstall-data; then
       success=$((success+1))
     else
@@ -292,7 +292,7 @@ app_review_uninstall(){
   if [ "$shared_count" -gt 0 ]; then
     printf '\nShared candidates can affect other apps. They are not removed by default.\n'
     if confirm "Also move the listed possible shared data to Trash?"; then
-      for path in "${APP_SHARED_PATHS[@]+"${APP_SHARED_PATHS[@]}"}"; do
+      for path in ${APP_SHARED_PATHS[@]+"${APP_SHARED_PATHS[@]}"}; do
         if app_safe_data_path "$path" && app_move_to_trash_checked "$path" uninstall-shared; then
           success=$((success+1))
         else
