@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.4.5
+
+- Fix the macOS Bash 3.2 `set -u` crash when uninstalling apps with no matching user data or only shared-data candidates.
+- Keep reviewed app-data removal behind explicit confirmation; possibly shared data remains a separate opt-in.
+- Add regression tests covering empty and shared-only matches in macOS CI.
+
 ## 3.4.4
 
 - Fix false installed status for Homebrew casks when an app was manually removed.

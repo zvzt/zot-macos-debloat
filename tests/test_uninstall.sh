@@ -80,4 +80,27 @@ confirm(){ return 1; }
 app_review_uninstall "$HOME/Applications/Firefox.app" Firefox org.mozilla.firefox > "$TEST_ROOT/decline.log"
 [ -d "$HOME/Applications/Firefox.app" ]
 [ -d "$HOME/Library/Application Support/Firefox" ]
+# macOS Bash 3.2 with set -u must handle apps with no matching data.
+mkdir -p "$HOME/Applications/Opiumware.app"
+app_scan_data Opiumware com.example.Opiumware
+[ "${#APP_DATA_PATHS[@]}" -eq 0 ]
+[ "${#APP_SHARED_PATHS[@]}" -eq 0 ]
+confirm(){ return 0; }
+app_review_uninstall "$HOME/Applications/Opiumware.app" Opiumware com.example.Opiumware > "$TEST_ROOT/empty-data.log"
+grep -Fq 'No high-confidence user data found.' "$TEST_ROOT/empty-data.log"
+[ ! -e "$HOME/Applications/Opiumware.app" ]
+[ -e "$HOME/.Trash/Opiumware.app" ]
+
+# Only potentially shared data: it must be listed but never removed by default.
+mkdir -p "$HOME/Applications/SharedOnly.app"
+mkdir -p "$HOME/Library/Group Containers/group.com.example.sharedonly"
+confirm(){ case "$1" in *shared*) return 1;; *) return 0;; esac; }
+app_scan_data SharedOnly com.example.sharedonly
+[ "${#APP_DATA_PATHS[@]}" -eq 0 ]
+[ "${#APP_SHARED_PATHS[@]}" -eq 1 ]
+app_review_uninstall "$HOME/Applications/SharedOnly.app" SharedOnly com.example.sharedonly > "$TEST_ROOT/shared-only.log"
+grep -Fq 'Possible shared data (1; not selected for removal)' "$TEST_ROOT/shared-only.log"
+[ ! -e "$HOME/Applications/SharedOnly.app" ]
+[ -e "$HOME/Library/Group Containers/group.com.example.sharedonly" ]
+
 echo "Uninstaller safety and app data tests passed."
